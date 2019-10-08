@@ -6,16 +6,16 @@ import {Uint8, Uint16} from './types';
  * Cpu
  */
 
-const STATUS_FLAGS = {
-    CARRY: 1 << 0,
-    ZERO: 1 << 1,
-    DISTABLE_INTERRUPTS: 1 << 2,
-    DECIMAL_MODE: 1 << 3,
-    BREAK: 1 << 4,
-    UNUSED: 1 << 5,
-    OVERFLOW: 1 << 6,
-    NEGATIVE: 1 << 7
-};
+const enum StatusFlags {
+    CARRY = 1 << 0,
+    ZERO = 1 << 1,
+    DISTABLE_INTERRUPTS = 1 << 2,
+    DECIMAL_MODE = 1 << 3,
+    BREAK = 1 << 4,
+    UNUSED = 1 << 5,
+    OVERFLOW = 1 << 6,
+    NEGATIVE = 1 << 7
+}
 
 class Cpu {
     // Registers
@@ -56,20 +56,20 @@ class Cpu {
         this._rStackPointer = 0xFD;
 
         // Set status to 0x00 and set UNUSED flag to 1
-        this._rStatus = 0x00 | STATUS_FLAGS.UNUSED;
+        this._rStatus = 0x00 | StatusFlags.UNUSED;
 
         // Reset takes 8 cycles
         this._remainingCycles = 8;
     }
 
-    irq(): unknown {
+    irq(): void {
         // TODO
     }
 
     /**
      * Non-Maskable Interrupt Request
      */
-    nmi(): unknown {
+    nmi(): void {
         // TODO
     }
 
@@ -82,7 +82,7 @@ class Cpu {
             const opcode = this.read(this._rProgramCounter);
 
             // Set flag UNUSED
-            this.setFlag(STATUS_FLAGS.UNUSED, true);
+            this.setFlag(StatusFlags.UNUSED, true);
 
             // Increment program counter
             this._rProgramCounter += 1;
@@ -104,7 +104,7 @@ class Cpu {
 
             // Set the unused to 1
             // (but WFT? we already set it, i think instruction can change it, so we need to set it to 1 after it)
-            this.setFlag(STATUS_FLAGS.UNUSED, true);
+            this.setFlag(StatusFlags.UNUSED, true);
         }
 
         this._remainingCycles -= 1;
@@ -122,7 +122,7 @@ class Cpu {
         throw new Error(`Unknown instruction "${mnemonic}"`);
     }
 
-    private setFlag(flag: number, isSet: boolean): void {
+    private setFlag(flag: StatusFlags, isSet: boolean): void {
         this._rStatus = isSet ? this._rStatus | flag : this._rStatus & ~flag;
     }
 }
