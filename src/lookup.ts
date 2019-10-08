@@ -3,7 +3,23 @@
  * See: http://www.oxyron.de/html/opcodes02.html
  */
 
-type LookupEntry = [string, string, number];
+type LegalInstructionMnemonic = 'BRK' | 'SED' | 'ORA' | 'NOP' | 'ASL' | 'PHP' | 'BPL' |
+    'CLC' | 'JSR' | 'AND' | 'BIT' | 'ROL' | 'PLP' | 'BMI' |
+    'SEC' | 'RTI' | 'EOR' | 'LSR' | 'PHA' | 'JMP' | 'BVC' |
+    'CLI' | 'RTS' | 'ADC' | 'ROR' | 'PLA' | 'BVS' | 'SEI' |
+    'STA' | 'STY' | 'STX' | 'DEY' | 'TXA' | 'BCC' | 'TYA' |
+    'TXS' | 'LDY' | 'LDA' | 'LDX' | 'TAY' | 'TAX' | 'BCS' |
+    'CLV' | 'TSX' | 'CPY' | 'CMP' | 'DEC' | 'INY' | 'DEX' |
+    'BNE' | 'CLD' | 'CPX' | 'SBC' | 'INC' | 'INX' | 'BEQ';
+
+type IllegalInstructionMnemonic = '???';
+
+type InstructionMnemonic = LegalInstructionMnemonic | IllegalInstructionMnemonic;
+
+type AddrModeMnemonic = 'IMM' | 'IZX' | 'IMP' | 'ZP0' | 'ABS' | 'REL' | 'IZY' |
+    'ZPX' | 'ABY' | 'ABX' | 'IND' | 'ZPY';
+
+type LookupEntry = [InstructionMnemonic, AddrModeMnemonic, number];
 
 // This is 16x16 matrix, but rows are oganized in 4x4 matrix for convinience of reading
 const LOOKUP: LookupEntry[] = [
@@ -88,4 +104,4 @@ const LOOKUP: LookupEntry[] = [
     ["NOP", "IMP", 4],["SBC", "ABX", 4],["INC", "ABX", 7],["???", "IMP", 7]
 ];
 
-export {LOOKUP};
+export {LOOKUP, InstructionMnemonic, AddrModeMnemonic};

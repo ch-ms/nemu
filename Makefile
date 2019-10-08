@@ -1,8 +1,17 @@
 .PHONY: build
 build:
-	@make lint
+	@make eslint
 	@$$(npm bin)/tsc
 
 .PHONY: lint
-lint:
+eslint:
 	@$$(npm bin)/eslint src/*
+
+.PHONY: tslint
+tslint:
+	@$$(npm bin)/tsc --noEmit
+
+.PHONY: lint
+lint:
+	@make eslint
+	@make tslint

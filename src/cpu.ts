@@ -1,4 +1,4 @@
-import {LOOKUP} from './lookup';
+import {LOOKUP, InstructionMnemonic, AddrModeMnemonic} from './lookup';
 import {Bus} from './bus';
 import {Uint8, Uint16} from './types';
 
@@ -112,13 +112,13 @@ class Cpu {
 
     // TODO: describe all uniq tokens
     // TODO: function description
-    private resolveAddrMode(mnemonic: string): () => 1 | 0 {
+    private resolveAddrMode(mnemonic: AddrModeMnemonic): () => 1 | 0 {
         throw new Error(`Unknown addressing mode "${mnemonic}"`);
     }
 
     // TODO: instruction mnemonic as type
     // TODO: function description
-    private resolveInstruction(mnemonic: string): () => 1 | 0 {
+    private resolveInstruction(mnemonic: InstructionMnemonic): () => 1 | 0 {
         throw new Error(`Unknown instruction "${mnemonic}"`);
     }
 
