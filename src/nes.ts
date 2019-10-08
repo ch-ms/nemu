@@ -12,7 +12,6 @@ class Nes {
     constructor() {
         this._bus = new Bus();
         this._cpu = new Cpu(this._bus);
-        this._cpu.reset();
     }
 
     // TODO: for debug purpose, make it safer later

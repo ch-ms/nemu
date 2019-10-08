@@ -17,7 +17,7 @@ const enum StatusFlags {
     NEGATIVE = 1 << 7
 }
 
-const enum Constants {
+const enum CpuConstants {
     BASE_STACK_ADDR = 0xfd,
     BASE_INSTRUCTION_ADDR = 0xfffc
 }
@@ -73,8 +73,8 @@ class Cpu {
 
     reset(): void {
         // Set PC to address contained in 0xfffc
-        const lo = this.read(Constants.BASE_INSTRUCTION_ADDR);
-        const hi = this.read(Constants.BASE_INSTRUCTION_ADDR + 1);
+        const lo = this.read(CpuConstants.BASE_INSTRUCTION_ADDR);
+        const hi = this.read(CpuConstants.BASE_INSTRUCTION_ADDR + 1);
         this._programCounter = (hi << 8) | lo;
 
         // Set a,x,y to 0
@@ -83,7 +83,7 @@ class Cpu {
         this._y = 0;
 
         // Set stack pointer to 0xfd
-        this._stackPointer = Constants.BASE_STACK_ADDR;
+        this._stackPointer = CpuConstants.BASE_STACK_ADDR;
 
         // Set status to 0x00 and set UNUSED flag to 1
         this._status = 0 | StatusFlags.UNUSED;
@@ -146,4 +146,4 @@ class Cpu {
     }
 }
 
-export {Cpu};
+export {Cpu, CpuConstants};

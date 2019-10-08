@@ -1,4 +1,5 @@
 import {Nes} from './nes';
+import {CpuConstants} from './cpu';
 import {Uint16, Uint8} from './types';
 
 function* iteratePage(addrInPage: Uint16): IterableIterator<number> {
@@ -50,6 +51,7 @@ class NesDebugger {
         this.btnStep.addEventListener('click', this.onBtnStepClick);
         this.btnReset.addEventListener('click', this.onBtnResetClick);
 
+        this.reset();
         this.render();
     }
 
@@ -99,7 +101,7 @@ class NesDebugger {
     }
 
     private renderProgram(): void {
-
+        // just scan memory around current pc
     }
 
     private onBtnStepClick = (): void => {
@@ -108,6 +110,12 @@ class NesDebugger {
 
     private onBtnResetClick = (): void => {
 
+    }
+
+    private reset(): void {
+        this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR, 0x00);
+        this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR + 1, 0x80);
+        this.nes.cpu.reset();
     }
 }
 
