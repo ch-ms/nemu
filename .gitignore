@@ -1,1 +1,4 @@
 *.swp
+notes
+build/
+node_modules

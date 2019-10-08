@@ -3,8 +3,10 @@
  * See: http://www.oxyron.de/html/opcodes02.html
  */
 
+type LookupEntry = [string, string, number];
+
 // This is 16x16 matrix, but rows are oganized in 4x4 matrix for convinience of reading
-const LOOKUP = [
+const LOOKUP: LookupEntry[] = [
     ["BRK", "IMM", 7],["ORA", "IZX", 6],["???", "IMP", 2],["???", "IMP", 8],
     ["NOP", "IMP", 3],["ORA", "ZP0", 3],["ASL", "ZP0", 5],["???", "IMP", 5],
     ["PHP", "IMP", 3],["ORA", "IMM", 2],["ASL", "IMP", 2],["???", "IMP", 2],
@@ -86,4 +88,4 @@ const LOOKUP = [
     ["NOP", "IMP", 4],["SBC", "ABX", 4],["INC", "ABX", 7],["???", "IMP", 7]
 ];
 
-module.exports = {LOOKUP};
+export {LOOKUP};
