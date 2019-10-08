@@ -1,3 +1,5 @@
+const {LOOKUP} = require('./lookup.js');
+
 /**
  * Cpu
  */
@@ -81,7 +83,6 @@ class Cpu {
      * Perform single clock cycle
      */
     clock() {
-        // TODO
         if (this._remainingCycles === 0) {
             // Read opcode from rProgramCounter
             const opcode = this.read(this._rProgramCounter);
@@ -92,18 +93,20 @@ class Cpu {
             // Increment program counter
             this._rProgramCounter += 1;
 
+            // Lookup instructions
+            const [instruction, addressingMode, cycles] = LOOKUP[opcode];
+
             // Lookup for remainingCycles from table
-            // this._remainingCycles = lookup[opcode].cycles;
+            this._remainingCycles = cycles;
 
             // Fetch data for instruction
-            // const additionalCycleAddressing = lookup[opcode].addrmode()
+            const additionalCycleAddressing = this[`_addrMode${addressingMode}`]();
 
             // Perform operation
-            // const additionalCycleOperation = lookup[opcode].operate();
+            const additionalCycleOperation = this[`_operation${instruction}`]();
 
             // Add additional cycle from addresing mode or operation itself
-            // this._remainingCycles += additionalCycleAddressing & additionalCycleOperation;
-
+            this._remainingCycles += additionalCycleAddressing & additionalCycleOperation;
             // Set the unused to 1
             // (but WFT? we already set it, i think instruction can change it, so we need to set it to 1 after it)
             this._setFlag(UNUSED, true);
