@@ -8,9 +8,26 @@ function* iteratePage(addrInPage: Uint16): IterableIterator<number> {
     }
 }
 
-function toHex(byte: Uint8): string {
-    const hex = byte.toString(16);
-    return hex.length == 1 ? `0${hex}` : hex;
+function stuffWithZeros(str: string, size: number) {
+    if (str.length >= size) {
+        return str;
+    }
+
+    while (str.length !== size) {
+        str = `0${str}`;
+    }
+
+    return str;
+}
+
+function uint8ToHex(uint8: Uint8): string {
+    const hex = uint8.toString(16);
+    return stuffWithZeros(hex, 2);
+}
+
+function uint16ToHex(uint16: Uint16): string {
+    const hex = uint16.toString(16);
+    return stuffWithZeros(hex, 4);
 }
 
 class NesDebugger {
@@ -20,6 +37,7 @@ class NesDebugger {
     private readonly btnReset: Element;
     private readonly page00: Element;
     private readonly page80: Element;
+    private readonly status: Element;
 
     constructor(container: Element) {
         this.container = container;
@@ -27,6 +45,7 @@ class NesDebugger {
         this.btnReset = container.querySelector('#reset')!;
         this.page00 = container.querySelector('#page00')!;
         this.page80 = container.querySelector('#page80')!;
+        this.status = this.container.querySelector('#status')!;
 
         this.btnStep.addEventListener('click', this.onBtnStepClick);
         this.btnReset.addEventListener('click', this.onBtnResetClick);
@@ -37,6 +56,7 @@ class NesDebugger {
     private render(): void {
         this.renderPage00();
         this.renderPage80();
+        this.renderStatus();
     }
 
     private renderPage(addrInPage: Uint16, element: Element): void {
@@ -50,7 +70,7 @@ class NesDebugger {
                 result.push(' ');
             }
 
-            result.push(toHex(this.nes.bus.read(addr)));
+            result.push(uint8ToHex(this.nes.bus.read(addr)));
             byteNum++;
         }
 
@@ -66,7 +86,16 @@ class NesDebugger {
     }
 
     private renderStatus(): void {
+        const result = [
+            `Status (NVUBDIZC): ${stuffWithZeros(this.nes.cpu.status.toString(2), 8)} `,
+            `PC: $${uint16ToHex(this.nes.cpu.programCounter)}`,
+            `A: $${uint8ToHex(this.nes.cpu.a)}`,
+            `X: $${uint8ToHex(this.nes.cpu.x)}`,
+            `Y: $${uint8ToHex(this.nes.cpu.y)}`,
+            `Stack Pointer: $${uint16ToHex(this.nes.cpu.stackPointer)}`
+        ];
 
+        this.status.innerHTML = result.join('\n');
     }
 
     private renderProgram(): void {
