@@ -4,24 +4,30 @@
         <script src="../build/cpu-debugger.js"></script>
     </head>
     <body>
-        <div class="debugger">
-            <div class="page page--0">
-
+        <div id="debugger">
+            <div class="info">
+                <pre id="page00" class="page page00">
+                </pre>
+                <pre id="page80" class="page page80">
+                </pre>
+                <div id="status" class="status">
+                </div>
+                <div id="program" class="program">
+                </div>
             </div>
-            <div class="page page--1">
+            <div class="controls">
+                <div>
+                    <button type="button" id="step">Step instruction</button>
+                </div>
+                <div>
+                    <button type="button" id="reset">Reset</button>
+                </div>
             </div>
-            <div class="status">
-
-            </div>
-            <div class="program">
-            </div>
-        </div>
-        <div class="controls">
-            <div>
-                <button type="button" name="step">Step instruction</button>
-            </div>
-            <div>
-                <button type="button" name="reset">Reset</button>
+            <div class="loader">
+                <h3>Load program to $8000</h3>
+                <div>
+                    <textarea id="program-loader"></textarea>
+                </div>
             </div>
         </div>
     </body>
