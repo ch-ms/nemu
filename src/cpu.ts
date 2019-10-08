@@ -86,7 +86,7 @@ class Cpu {
         this._stackPointer = Constants.BASE_STACK_ADDR;
 
         // Set status to 0x00 and set UNUSED flag to 1
-        this._status = 0x00 | StatusFlags.UNUSED;
+        this._status = 0 | StatusFlags.UNUSED;
 
         // Reset takes 8 cycles
         this._remainingCycles = 8;
