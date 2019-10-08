@@ -19,18 +19,43 @@ const enum StatusFlags {
 
 class Cpu {
     // Registers
-    private _rA: Uint8 = 0;
-    private _rX: Uint8 = 0;
-    private _rY: Uint8 = 0;
-    private _rStackPointer: Uint16 = 0; // Points to location on bus
-    private _rProgramCounter: Uint16 = 0;
-    private _rStatus: Uint8 = 0;
+    private _a: Uint8 = 0;
+    private _x: Uint8 = 0;
+    private _y: Uint8 = 0;
+    private _stackPointer: Uint16 = 0; // Points to location on bus
+    private _programCounter: Uint16 = 0;
+    private _status: Uint8 = 0;
+
     private _remainingCycles = 0;
 
     private readonly _bus: Bus;
 
     constructor(bus: Bus) {
         this._bus = bus;
+    }
+
+    get a(): Uint8 {
+        return this._a;
+    }
+
+    get x(): Uint8 {
+        return this._x;
+    }
+
+    get y(): Uint8 {
+        return this._y;
+    }
+
+    get stackPointer(): Uint16 {
+        return this._stackPointer;
+    }
+
+    get programCounter(): Uint16 {
+        return this._programCounter;
+    }
+
+    get status(): Uint8 {
+        return this._status;
     }
 
     read(addr: Uint16): Uint8 {
@@ -45,18 +70,18 @@ class Cpu {
         // Set PC to address contained in 0xfffc
         const lo = this.read(0xfffc);
         const hi = this.read(0xfffc + 1);
-        this._rProgramCounter = (hi << 8) | lo;
+        this._programCounter = (hi << 8) | lo;
 
         // Set a,x,y to 0
-        this._rA = 0;
-        this._rX = 0;
-        this._rY = 0;
+        this._a = 0;
+        this._x = 0;
+        this._y = 0;
 
         // Set stack pointer to 0xfd
-        this._rStackPointer = 0xFD;
+        this._stackPointer = 0xfd;
 
         // Set status to 0x00 and set UNUSED flag to 1
-        this._rStatus = 0x00 | StatusFlags.UNUSED;
+        this._status = 0x00 | StatusFlags.UNUSED;
 
         // Reset takes 8 cycles
         this._remainingCycles = 8;
@@ -79,13 +104,13 @@ class Cpu {
     clock(): void {
         if (this._remainingCycles === 0) {
             // Read opcode from rProgramCounter
-            const opcode = this.read(this._rProgramCounter);
+            const opcode = this.read(this._programCounter);
 
             // Set flag UNUSED
             this.setFlag(StatusFlags.UNUSED, true);
 
             // Increment program counter
-            this._rProgramCounter += 1;
+            this._programCounter += 1;
 
             // Lookup instructions
             const [instruction, addrMode, cycles] = LOOKUP[opcode];
@@ -123,7 +148,7 @@ class Cpu {
     }
 
     private setFlag(flag: StatusFlags, isSet: boolean): void {
-        this._rStatus = isSet ? this._rStatus | flag : this._rStatus & ~flag;
+        this._status = isSet ? this._status | flag : this._status & ~flag;
     }
 }
 

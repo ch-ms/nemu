@@ -2,7 +2,8 @@
     "compilerOptions": {
         "strict": true,
         "outDir": "./build",
-        "noImplicitReturns": true
+        "noImplicitReturns": true,
+        "target": "ES5"
     },
     "include": [
         "src/*"
