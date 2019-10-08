@@ -92,17 +92,6 @@ class Cpu {
         this._remainingCycles = 8;
     }
 
-    irq(): void {
-        // TODO
-    }
-
-    /**
-     * Non-Maskable Interrupt Request
-     */
-    nmi(): void {
-        // TODO
-    }
-
     /**
      * Perform single clock cycle
      */

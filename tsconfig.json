@@ -3,7 +3,9 @@
         "strict": true,
         "outDir": "./build",
         "noImplicitReturns": true,
-        "target": "ES5"
+        "target": "es6",
+        "module": "commonjs",
+        "sourceMap": true
     },
     "include": [
         "src/*"

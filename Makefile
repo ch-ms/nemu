@@ -1,7 +1,11 @@
 .PHONY: build
 build:
 	@make eslint
-	@$$(npm bin)/tsc
+	@$$(npm bin)/webpack
+
+.PHONY: build-watch
+build-watch:
+	@$$(npm bin)/webpack --watch
 
 .PHONY: lint
 eslint:
