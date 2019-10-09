@@ -142,7 +142,7 @@ class NesDebugger {
     }
 
     private onBtnResetClick = (): void => {
-
+        this.reset();
     }
 
     private onBtnLoadClick = (): void => {
