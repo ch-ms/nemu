@@ -144,6 +144,9 @@ class Cpu {
             case 'ABS':
                 return this.addrModeABS();
 
+            case 'IMP':
+                return this.addrModeIMP();
+
             default:
                 throw new Error(`Unknown addressing mode "${mnemonic}"`);
         }
@@ -198,6 +201,14 @@ class Cpu {
 
         // TODO: mb pack?
         return [hi << 8 | lo, 0];
+    }
+
+    /*
+     * No data requires for instruction
+     */
+    private addrModeIMP(): AddrModeReturnValue {
+        // TODO: how to return null addr?
+        return [0, 0];
     }
 
     /*
