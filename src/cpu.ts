@@ -6,7 +6,8 @@ import {Uint8, Uint16} from './types';
  * Cpu
  */
 
-type AdditionalCycleFlag = 1 | 0;
+type BitValue = 0 | 1;
+type AdditionalCycleFlag = BitValue;
 type AddrModeReturnValue = [Uint16, AdditionalCycleFlag];
 
 const enum StatusFlags {
@@ -170,6 +171,9 @@ class Cpu {
             case 'CLC':
                 return this.instructionCLC();
 
+            case 'ADC':
+                return this.instructionADC(addr);
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -182,6 +186,10 @@ class Cpu {
     private setZeroAndNegativeByValue(value: Uint8): void {
         this.setFlag(StatusFlags.ZERO, value === 0);
         this.setFlag(StatusFlags.NEGATIVE, (value & StatusFlags.NEGATIVE) !== 0);
+    }
+
+    private getFlag(flag: StatusFlags): BitValue {
+        return (this._status & flag) === 0 ? 0 : 1;
     }
 
     /*
@@ -259,6 +267,25 @@ class Cpu {
     private instructionCLC(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.CARRY, false);
         return 0;
+    }
+
+    /*
+     * Add data in addr to acc with C flag
+     */
+    private instructionADC(addr: Uint16): AdditionalCycleFlag {
+        const data = this.read(addr);
+        const result = this._a + data + this.getFlag(StatusFlags.CARRY);
+
+        this.setFlag(StatusFlags.CARRY, result > 255);
+        this.setFlag(
+            StatusFlags.OVERFLOW,
+            Boolean((~(this._a ^ data) & (this._a ^ result)) & StatusFlags.NEGATIVE)
+        );
+
+        // Register A is 8 bit
+        this._a = result & 0xff;
+        this.setZeroAndNegativeByValue(this._a);
+        return 1;
     }
 }
 
