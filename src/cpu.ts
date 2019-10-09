@@ -63,6 +63,10 @@ class Cpu {
         return this._status;
     }
 
+    get remainingCycles(): number {
+        return this._remainingCycles;
+    }
+
     read(addr: Uint16): Uint8 {
         return this._bus.read(addr);
     }

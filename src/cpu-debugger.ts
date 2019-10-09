@@ -138,7 +138,7 @@ class NesDebugger {
     }
 
     private onBtnStepClick = (): void => {
-
+        this.executeInstruction();
     }
 
     private onBtnResetClick = (): void => {
@@ -170,6 +170,18 @@ class NesDebugger {
         this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR, DebuggerConstants.BASE_PRG_ADDR & 0xff);
         this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR + 1, (DebuggerConstants.BASE_PRG_ADDR & 0xff00) >> 8);
         this.nes.cpu.reset();
+        this.skipCycles();
+    }
+
+    private executeInstruction(): void {
+        this.nes.cpu.clock();
+        this.skipCycles();
+    }
+
+    private skipCycles(): void {
+        while (this.nes.cpu.remainingCycles !== 0) {
+            this.nes.cpu.clock();
+        }
     }
 }
 
