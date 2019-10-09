@@ -105,13 +105,12 @@ class Cpu {
     clock(): void {
         if (this._remainingCycles === 0) {
             // Read opcode from rProgramCounter
+            // TODO: mb read from pc and inc?
             const opcode = this.read(this._programCounter);
+            this._programCounter += 1;
 
             // Set flag UNUSED
             this.setFlag(StatusFlags.UNUSED, true);
-
-            // Increment program counter
-            this._programCounter += 1;
 
             // Lookup instructions
             const [instruction, addrMode, cycles] = LOOKUP[opcode];
@@ -142,6 +141,9 @@ class Cpu {
             case 'IMM':
                 return this.addrModeIMM();
 
+            case 'ABS':
+                return this.addrModeABS();
+
             default:
                 throw new Error(`Unknown addressing mode "${mnemonic}"`);
         }
@@ -152,6 +154,9 @@ class Cpu {
         switch (mnemonic) {
             case 'LDX':
                 return this.instructionLDX(addr);
+
+            case 'STX':
+                return this.instructionSTX(addr);
 
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
@@ -166,7 +171,22 @@ class Cpu {
      * Immediate addressing mode uses next byte from instruction as data
      */
     private addrModeIMM(): AddrModeReturnValue {
-        return [this._programCounter++, 0];
+        const addr = this._programCounter;
+        this._programCounter += 1;
+        return [addr, 0];
+    }
+
+    /*
+     * Absolute addressing mode uses next two bytes to form address
+     */
+    private addrModeABS(): AddrModeReturnValue {
+        const lo = this.read(this._programCounter);
+        this._programCounter += 1;
+        const hi = this.read(this._programCounter);
+        this._programCounter += 1;
+
+        // TODO: mb pack?
+        return [hi << 8 | lo, 0];
     }
 
     /*
@@ -178,6 +198,14 @@ class Cpu {
         this.setFlag(StatusFlags.ZERO, this._x === 0);
         this.setFlag(StatusFlags.NEGATIVE, (this._x & StatusFlags.NEGATIVE) !== 0);
         return 1;
+    }
+
+    /*
+     * Store X register at given address
+     */
+    private instructionSTX(addr: Uint16): AdditionalCycleFlag {
+        this.write(addr, this._x);
+        return 0;
     }
 }
 
