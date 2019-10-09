@@ -167,6 +167,9 @@ class Cpu {
             case 'STX':
                 return this.instructionSTX(addr);
 
+            case 'CLC':
+                return this.instructionCLC();
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -247,6 +250,14 @@ class Cpu {
      */
     private instructionSTX(addr: Uint16): AdditionalCycleFlag {
         this.write(addr, this._x);
+        return 0;
+    }
+
+    /*
+     * Clear carry flag
+     */
+    private instructionCLC(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.CARRY, false);
         return 0;
     }
 }
