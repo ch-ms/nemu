@@ -171,11 +171,13 @@ class NesDebugger {
         this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR + 1, (DebuggerConstants.BASE_PRG_ADDR & 0xff00) >> 8);
         this.nes.cpu.reset();
         this.skipCycles();
+        this.render()
     }
 
     private executeInstruction(): void {
         this.nes.cpu.clock();
         this.skipCycles();
+        this.render()
     }
 
     private skipCycles(): void {

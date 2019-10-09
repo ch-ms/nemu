@@ -120,10 +120,10 @@ class Cpu {
             this._remainingCycles = cycles;
 
             // Fetch data for instruction
-            const [, additionalCycleAddr] = this.resolveAddrMode(addrMode);
+            const [addr, additionalCycleAddr] = this.resolveAddrMode(addrMode);
 
             // Perform instruction
-            const additionalCycleInstruction = this.resolveInstruction(instruction)();
+            const additionalCycleInstruction = this.resolveInstruction(instruction, addr);
 
             // Add additional cycle from addresing mode or instruction itself
             this._remainingCycles += additionalCycleAddr & additionalCycleInstruction;
@@ -148,8 +148,14 @@ class Cpu {
     }
 
     // TODO: function description
-    private resolveInstruction(mnemonic: InstructionMnemonic): () => AdditionalCycleFlag {
-        throw new Error(`Unknown instruction "${mnemonic}"`);
+    private resolveInstruction(mnemonic: InstructionMnemonic, addr: Uint16): AdditionalCycleFlag {
+        switch (mnemonic) {
+            case 'LDX':
+                return this.instructionLDX(addr);
+
+            default:
+                throw new Error(`Unknown instruction "${mnemonic}"`);
+        }
     }
 
     private setFlag(flag: StatusFlags, isSet: boolean): void {
@@ -161,6 +167,17 @@ class Cpu {
      */
     private addrModeIMM(): AddrModeReturnValue {
         return [this._programCounter++, 0];
+    }
+
+    /*
+     * Load X register with data from memory, setting zero and negative flags as appropriate
+     */
+    // TODO: WTF we need additional cycle flag?
+    private instructionLDX(addr: Uint16): AdditionalCycleFlag {
+        this._x = this.read(addr);
+        this.setFlag(StatusFlags.ZERO, this._x === 0);
+        this.setFlag(StatusFlags.NEGATIVE, (this._x & StatusFlags.NEGATIVE) !== 0);
+        return 1;
     }
 }
 

@@ -13,16 +13,18 @@ class Bus {
     write(addr: Uint16, data: Uint8): void {
         if (addr >= 0x0 && addr <= 0xffff) {
             this._ram[addr] = data;
+            return;
         }
+
+        throw Error(`addr "${addr}" is out of addressible range [0x0000, 0xffff]`)
     }
 
-    read(addr: Uint8): Uint8 {
+    read(addr: Uint16): Uint8 {
         if (addr >= 0x0 && addr <= 0xffff) {
             return this._ram[addr];
         }
 
-        // TODO: mb throw error?
-        return 0x0;
+        throw Error(`addr "${addr}" is out of addressible range [0x0000, 0xffff]`)
     }
 }
 
