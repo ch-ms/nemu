@@ -158,6 +158,9 @@ class Cpu {
             case 'LDY':
                 return this.instructionLDY(addr);
 
+            case 'LDA':
+                return this.instructionLDA(addr);
+
             case 'STX':
                 return this.instructionSTX(addr);
 
@@ -168,6 +171,11 @@ class Cpu {
 
     private setFlag(flag: StatusFlags, isSet: boolean): void {
         this._status = isSet ? this._status | flag : this._status & ~flag;
+    }
+
+    private setZeroAndNegativeByValue(value: Uint8): void {
+        this.setFlag(StatusFlags.ZERO, value === 0);
+        this.setFlag(StatusFlags.NEGATIVE, (value & StatusFlags.NEGATIVE) !== 0);
     }
 
     /*
@@ -198,9 +206,8 @@ class Cpu {
     // TODO: WTF we need additional cycle flag?
     private instructionLDX(addr: Uint16): AdditionalCycleFlag {
         this._x = this.read(addr);
-        // TODO: mb set zero negative by value?
-        this.setFlag(StatusFlags.ZERO, this._x === 0);
-        this.setFlag(StatusFlags.NEGATIVE, (this._x & StatusFlags.NEGATIVE) !== 0);
+        this.setZeroAndNegativeByValue(this._x);
+
         return 1;
     }
 
@@ -209,8 +216,18 @@ class Cpu {
      */
     private instructionLDY(addr: Uint16): AdditionalCycleFlag {
         this._y = this.read(addr);
-        this.setFlag(StatusFlags.ZERO, this._y === 0);
-        this.setFlag(StatusFlags.NEGATIVE, (this._y & StatusFlags.NEGATIVE) !== 0);
+        this.setZeroAndNegativeByValue(this._y);
+
+        return 1;
+    }
+
+    /*
+     * Load A register with data from memory, setting zero and negative flags as appropriate
+     */
+    private instructionLDA(addr: Uint16): AdditionalCycleFlag {
+        this._a = this.read(addr);
+        this.setZeroAndNegativeByValue(this._a);
+
         return 1;
     }
 
