@@ -6,6 +6,9 @@ import {Uint8, Uint16} from './types';
  * Cpu
  */
 
+type AdditionalCycleFlag = 1 | 0;
+type AddrModeReturnValue = [Uint16, AdditionalCycleFlag];
+
 const enum StatusFlags {
     CARRY = 1 << 0,
     ZERO = 1 << 1,
@@ -117,7 +120,7 @@ class Cpu {
             this._remainingCycles = cycles;
 
             // Fetch data for instruction
-            const additionalCycleAddr = this.resolveAddrMode(addrMode)();
+            const [, additionalCycleAddr] = this.resolveAddrMode(addrMode);
 
             // Perform instruction
             const additionalCycleInstruction = this.resolveInstruction(instruction)();
@@ -133,20 +136,31 @@ class Cpu {
         this._remainingCycles -= 1;
     }
 
-    // TODO: describe all uniq tokens
     // TODO: function description
-    private resolveAddrMode(mnemonic: AddrModeMnemonic): () => 1 | 0 {
-        throw new Error(`Unknown addressing mode "${mnemonic}"`);
+    private resolveAddrMode(mnemonic: AddrModeMnemonic): AddrModeReturnValue {
+        switch (mnemonic) {
+            case 'IMM':
+                return this.addrModeIMM();
+
+            default:
+                throw new Error(`Unknown addressing mode "${mnemonic}"`);
+        }
     }
 
-    // TODO: instruction mnemonic as type
     // TODO: function description
-    private resolveInstruction(mnemonic: InstructionMnemonic): () => 1 | 0 {
+    private resolveInstruction(mnemonic: InstructionMnemonic): () => AdditionalCycleFlag {
         throw new Error(`Unknown instruction "${mnemonic}"`);
     }
 
     private setFlag(flag: StatusFlags, isSet: boolean): void {
         this._status = isSet ? this._status | flag : this._status & ~flag;
+    }
+
+    /*
+     * Immediate addressing mode uses next byte from instruction as data
+     */
+    private addrModeIMM(): AddrModeReturnValue {
+        return [this._programCounter++, 0];
     }
 }
 
