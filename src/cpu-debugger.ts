@@ -38,30 +38,39 @@ function uint16ToHex(uint16: Uint16): string {
     return stuffWithZeros(hex, 4);
 }
 
+const enum DebuggerConstants {
+    BASE_PRG_ADDR = 0x8000,
+    EXAMPLE_PRG = 'A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA'
+}
+
 class NesDebugger {
     private readonly nes = new Nes();
     private readonly container: Element;
     private readonly btnStep: Element;
     private readonly btnReset: Element;
+    private readonly btnLoad: Element;
     private readonly page00: Element;
     private readonly page80: Element;
     private readonly status: Element;
     private readonly program: Element;
+    private readonly programData: HTMLTextAreaElement;
 
     constructor(container: Element) {
         this.container = container;
         this.btnStep = container.querySelector('#step')!;
         this.btnReset = container.querySelector('#reset')!;
+        this.btnLoad = container.querySelector('#load')!;
         this.page00 = container.querySelector('#page00')!;
         this.page80 = container.querySelector('#page80')!;
         this.status = this.container.querySelector('#status')!;
         this.program = this.container.querySelector('#program')!;
+        this.programData = this.container.querySelector('#program-data')! as HTMLTextAreaElement;
 
         this.btnStep.addEventListener('click', this.onBtnStepClick);
         this.btnReset.addEventListener('click', this.onBtnResetClick);
+        this.btnLoad.addEventListener('click', this.onBtnLoadClick);
 
-        this.reset();
-        this.render();
+        this.loadProgram(DebuggerConstants.EXAMPLE_PRG);
     }
 
     private render(): void {
@@ -99,12 +108,13 @@ class NesDebugger {
 
     private renderStatus(): void {
         const result = [
-            `Status (NVUBDIZC): ${stuffWithZeros(this.nes.cpu.status.toString(2), 8)} `,
+            `       NVUBDIZC`,
+            `Flags: ${stuffWithZeros(this.nes.cpu.status.toString(2), 8)} `,
             `PC: $${uint16ToHex(this.nes.cpu.programCounter)}`,
+            `SP: $${uint16ToHex(this.nes.cpu.stackPointer)}`,
             `A: $${uint8ToHex(this.nes.cpu.a)}`,
             `X: $${uint8ToHex(this.nes.cpu.x)}`,
-            `Y: $${uint8ToHex(this.nes.cpu.y)}`,
-            `Stack Pointer: $${uint16ToHex(this.nes.cpu.stackPointer)}`
+            `Y: $${uint8ToHex(this.nes.cpu.y)}`
         ];
 
         this.status.innerHTML = result.join('\n');
@@ -135,9 +145,30 @@ class NesDebugger {
 
     }
 
+    private onBtnLoadClick = (): void => {
+        this.loadProgram(this.programData.value);
+    }
+
+    private loadProgram(program: string): void {
+        this.reset();
+        this.programData.value = program;
+
+        const data = program.split(' ');
+        for (let i = 0; i < data.length; i++) {
+            const byte = parseInt(data[i], 16);
+            if (data[i].length !== 2 || isNaN(byte)) {
+                throw new Error(`Corrupted byte ${data[i]}`);
+            }
+
+            this.nes.bus.write(DebuggerConstants.BASE_PRG_ADDR + i, byte);
+        }
+
+        this.render();
+    }
+
     private reset(): void {
-        this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR, 0x00);
-        this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR + 1, 0x80);
+        this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR, DebuggerConstants.BASE_PRG_ADDR & 0xff);
+        this.nes.bus.write(CpuConstants.BASE_INSTRUCTION_ADDR + 1, (DebuggerConstants.BASE_PRG_ADDR & 0xff00) >> 8);
         this.nes.cpu.reset();
     }
 }
