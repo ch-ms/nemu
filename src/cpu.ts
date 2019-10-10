@@ -174,6 +174,9 @@ class Cpu {
             case 'ADC':
                 return this.instructionADC(addr);
 
+            case 'DEY':
+                return this.instructionDEY();
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -285,7 +288,17 @@ class Cpu {
         // Register A is 8 bit
         this._a = result & 0xff;
         this.setZeroAndNegativeByValue(this._a);
+
         return 1;
+    }
+
+    /**
+     * Decrement Y register
+     */
+    private instructionDEY(): void {
+        this._y -= 1;
+        this.setZeroAndNegativeByValue(this._y);
+        return 0;
     }
 }
 
