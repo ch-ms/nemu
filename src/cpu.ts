@@ -123,7 +123,7 @@ class Cpu {
             const [addr, additionalCycleAddr] = this.resolveAddrMode(addrMode);
 
             // Perform instruction
-            const additionalCycleInstruction = this.resolveInstruction(instruction, addr);
+            const additionalCycleInstruction = this.resolveInstruction(opcode, instruction, addr);
 
             // Add additional cycle from addresing mode or instruction itself
             this._remainingCycles += additionalCycleAddr & additionalCycleInstruction;
@@ -157,7 +157,7 @@ class Cpu {
     }
 
     // TODO: function description
-    private resolveInstruction(mnemonic: InstructionMnemonic, addr: Uint16): AdditionalCycleFlag {
+    private resolveInstruction(opcode: Uint8, mnemonic: InstructionMnemonic, addr: Uint16): AdditionalCycleFlag {
         switch (mnemonic) {
             case 'LDX':
                 return this.instructionLDX(addr);
@@ -188,6 +188,9 @@ class Cpu {
 
             case 'STA':
                 return this.instructionSTA(addr);
+
+            case 'NOP':
+                return this.instructionNOP(opcode);
 
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
@@ -339,7 +342,7 @@ class Cpu {
         return 0;
     }
 
-    /*
+    /**
      * Branch if not equal
      */
     private instructionBNE(addrRel: Uint16): AdditionalCycleFlag {
@@ -359,11 +362,30 @@ class Cpu {
         return 0;
     }
 
-    /*
+    /**
      * Store accumulator at address
      */
     private instructionSTA(addr: Uint16): AdditionalCycleFlag {
         this.write(addr, this._a);
+        return 0;
+    }
+
+    /**
+     * Just nothing
+     */
+    private instructionNOP(opcode: Uint8): AdditionalCycleFlag {
+        // Not all NOPs are equal
+        if (
+            opcode === 0x1c ||
+            opcode === 0x3c ||
+            opcode === 0x5c ||
+            opcode === 0x7c ||
+            opcode === 0xdc ||
+            opcode === 0xfc
+        ) {
+            return 1;
+        }
+
         return 0;
     }
 }
