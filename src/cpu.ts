@@ -183,6 +183,9 @@ class Cpu {
             case 'BNE':
                 return this.instructionBNE(addr);
 
+            case 'STA':
+                return this.instructionSTA(addr);
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -339,6 +342,14 @@ class Cpu {
             this._programCounter = addr;
         }
 
+        return 0;
+    }
+
+    /*
+     * Store accumulator at address
+     */
+    private instructionSTA(addr: Uint16): AdditionalCycleFlag {
+        this.write(addr, this._a);
         return 0;
     }
 }
