@@ -22,8 +22,10 @@ const enum StatusFlags {
 }
 
 const enum CpuConstants {
-    BASE_STACK_ADDR = 0xfd,
-    BASE_INSTRUCTION_ADDR = 0xfffc
+    BASE_STACK_ADDR = 0x0100,
+    BASE_STACK_OFFSET = 0xfd,
+    BASE_INSTRUCTION_ADDR = 0xfffc,
+    BASE_INTERRUPT_ADDR = 0xfffe
 }
 
 class Cpu {
@@ -31,7 +33,7 @@ class Cpu {
     private _a: Uint8 = 0;
     private _x: Uint8 = 0;
     private _y: Uint8 = 0;
-    private _stackPointer: Uint16 = 0; // Points to location on bus
+    private _stackPointer: Uint8 = 0; // Points to location on bus
     private _programCounter: Uint16 = 0;
     private _status: Uint8 = 0;
 
@@ -91,7 +93,7 @@ class Cpu {
         this._y = 0;
 
         // Set stack pointer to 0xfd
-        this._stackPointer = CpuConstants.BASE_STACK_ADDR;
+        this._stackPointer = CpuConstants.BASE_STACK_OFFSET;
 
         // Set status to 0x00 and set UNUSED flag to 1
         this._status = 0 | StatusFlags.UNUSED;
@@ -191,6 +193,9 @@ class Cpu {
 
             case 'NOP':
                 return this.instructionNOP(opcode);
+
+            case 'BRK':
+                return this.instructionBRK();
 
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
@@ -386,6 +391,29 @@ class Cpu {
             return 1;
         }
 
+        return 0;
+    }
+
+    /**
+     * Program interrupt
+     */
+    private instructionBRK(): AdditionalCycleFlag {
+        this._programCounter += 1;
+
+        // TODO: mb push to stack?
+        this.write(CpuConstants.BASE_STACK_ADDR + this._stackPointer, (this._programCounter >> 8) & 0x00ff);
+        this._stackPointer -= 1;
+        this.write(CpuConstants.BASE_STACK_ADDR + this._stackPointer, this._programCounter & 0x00ff);
+        this._stackPointer -= 1;
+
+        this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, true);
+        this.setFlag(StatusFlags.BREAK, true);
+        this.write(CpuConstants.BASE_STACK_ADDR + this._stackPointer, this._status);
+        this._stackPointer -= 1;
+        // TODO: why?
+        this.setFlag(StatusFlags.BREAK, false);
+
+        this._programCounter = this.read(CpuConstants.BASE_INTERRUPT_ADDR) | (this.read(CpuConstants.BASE_INTERRUPT_ADDR + 1) << 8);
         return 0;
     }
 }

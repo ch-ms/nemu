@@ -111,7 +111,7 @@ class NesDebugger {
             `       NVUBDIZC`,
             `Flags: ${stuffWithZeros(this.nes.cpu.status.toString(2), 8)} `,
             `PC: $${uint16ToHex(this.nes.cpu.programCounter)}`,
-            `SP: $${uint16ToHex(this.nes.cpu.stackPointer)}`,
+            `SP: $${uint8ToHex(this.nes.cpu.stackPointer)}`,
             `A: $${uint8ToHex(this.nes.cpu.a)}`,
             `X: $${uint8ToHex(this.nes.cpu.x)}`,
             `Y: $${uint8ToHex(this.nes.cpu.y)}`
