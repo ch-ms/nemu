@@ -180,6 +180,9 @@ class Cpu {
             case 'DEY':
                 return this.instructionDEY();
 
+            case 'DEX':
+                return this.instructionDEX();
+
             case 'BNE':
                 return this.instructionBNE(addr);
 
@@ -317,9 +320,20 @@ class Cpu {
     }
 
     /**
+     * Descrement X register
+     */
+    private instructionDEX(): AdditionalCycleFlag {
+        // TODO: mb bug if y is zero?
+        this._x -= 1;
+        this.setZeroAndNegativeByValue(this._x);
+        return 0;
+    }
+
+    /**
      * Decrement Y register
      */
     private instructionDEY(): AdditionalCycleFlag {
+        // TODO: mb bug if y is zero?
         this._y -= 1;
         this.setZeroAndNegativeByValue(this._y);
         return 0;
