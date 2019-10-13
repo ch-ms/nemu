@@ -148,6 +148,9 @@ class Cpu {
             case 'IMP':
                 return this.addrModeIMP();
 
+            case 'REL':
+                return this.addrModeREL();
+
             default:
                 throw new Error(`Unknown addressing mode "${mnemonic}"`);
         }
@@ -176,6 +179,9 @@ class Cpu {
 
             case 'DEY':
                 return this.instructionDEY();
+
+            case 'BNE':
+                return this.instructionBNE(addr);
 
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
@@ -226,6 +232,21 @@ class Cpu {
     }
 
     /*
+     * Exclusive to branch instructions
+     * Address must reside within -128 to +127 relative to the instruction after branch instruction
+     */
+    private addrModeREL(): AddrModeReturnValue {
+        let addrRelative: Uint16 = 0x0000 | this.read(this._programCounter);
+        this._programCounter += 1;
+        if (addrRelative & 0x80) {
+            addrRelative = -256 + addrRelative;
+        }
+
+        // TODO: addrRelative is not the same shit as addrAbs, need to account that
+        return [addrRelative, 0];
+    }
+
+    /*
      * Load X register with data from memory, setting zero and negative flags as appropriate
      */
     // TODO: WTF we need additional cycle flag?
@@ -273,7 +294,7 @@ class Cpu {
     }
 
     /*
-     * Add data in addr to acc with C flag
+     * Add data in addr to acc with CARRY flag
      */
     private instructionADC(addr: Uint16): AdditionalCycleFlag {
         const data = this.read(addr);
@@ -295,9 +316,29 @@ class Cpu {
     /**
      * Decrement Y register
      */
-    private instructionDEY(): void {
+    private instructionDEY(): AdditionalCycleFlag {
         this._y -= 1;
         this.setZeroAndNegativeByValue(this._y);
+        return 0;
+    }
+
+    /*
+     * Branch if not equal
+     */
+    private instructionBNE(addrRel: Uint16): AdditionalCycleFlag {
+        if (this.getFlag(StatusFlags.ZERO) === 0) {
+            this._remainingCycles += 1;
+
+            const addr = this._programCounter + addrRel;
+
+            // Stepping through page boundary requires additional clock cycle
+            if ((addr & 0xff00) !== (this._programCounter & 0xff00)) {
+                this._remainingCycles += 1;
+            }
+
+            this._programCounter = addr;
+        }
+
         return 0;
     }
 }
