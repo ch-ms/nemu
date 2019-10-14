@@ -173,6 +173,9 @@ class Cpu {
             case 'STX':
                 return this.instructionSTX(addr);
 
+            case 'STY':
+                return this.instructionSTY(addr);
+
             case 'CLC':
                 return this.instructionCLC();
 
@@ -355,10 +358,18 @@ class Cpu {
     }
 
     /*
-     * Store X register at given address
+     * Store X register at Memory
      */
     private instructionSTX(addr: Uint16): AdditionalCycleFlag {
         this.write(addr, this._x);
+        return 0;
+    }
+
+    /*
+     * Store Y register at Memory
+     */
+    private instructionSTY(addr: Uint16): AdditionalCycleFlag {
+        this.write(addr, this._y);
         return 0;
     }
 
