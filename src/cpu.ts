@@ -269,6 +269,9 @@ class Cpu {
             case 'TSX':
                 return this.instructionTSX();
 
+            case 'BIT':
+                return this.instructionBIT(addr);
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -686,6 +689,18 @@ class Cpu {
     private instructionTSX(): AdditionalCycleFlag {
         this._x = this._stackPointer;
         this.setZeroAndNegativeByValue(this._x);
+        return 0;
+    }
+
+    /*
+     * Test mask pattern in A with Memory
+     * A & M, N = M7, V = M6
+     */
+    private instructionBIT(addr: Uint16): AdditionalCycleFlag {
+        const data = this.read(addr);
+        this.setFlag(StatusFlags.ZERO, (data & this._a) === 0);
+        this.setFlag(StatusFlags.NEGATIVE, (data & StatusFlags.NEGATIVE) !== 0);
+        this.setFlag(StatusFlags.OVERFLOW, (data & StatusFlags.OVERFLOW) !== 0);
         return 0;
     }
 
