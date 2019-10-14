@@ -212,6 +212,12 @@ class Cpu {
             case 'INX':
                 return this.instructionINX();
 
+            case 'INC':
+                return this.instructionINC(addr);
+
+            case 'DEC':
+                return this.instructionDEC(addr);
+
             case 'BNE':
                 return this.instructionBNE(addr);
 
@@ -501,6 +507,26 @@ class Cpu {
         // TODO: mb bug if y is zero?
         this._y += 1;
         this.setZeroAndNegativeByValue(this._y);
+        return 0;
+    }
+
+    /*
+     * Increment Memory
+     */
+    private instructionINC(addr: Uint16): AdditionalCycleFlag {
+        const data = (this.read(addr) + 1) % 0xff;
+        this.setZeroAndNegativeByValue(data);
+        this.write(addr, data);
+        return 0;
+    }
+
+    /*
+     * Decrement Memory
+     */
+    private instructionDEC(addr: Uint16): AdditionalCycleFlag {
+        const data = (this.read(addr) - 1) % 0xff;
+        this.setZeroAndNegativeByValue(data);
+        this.write(addr, data);
         return 0;
     }
 
