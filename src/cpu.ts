@@ -182,6 +182,12 @@ class Cpu {
             case 'SED':
                 return this.instructionSED();
 
+            case 'CLI':
+                return this.instructionCLI();
+
+            case 'SEI':
+                return this.instructionSEI();
+
             case 'ADC':
                 return this.instructionADC(addr);
 
@@ -350,6 +356,22 @@ class Cpu {
      */
     private instructionSED(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.DECIMAL_MODE, true);
+        return 0;
+    }
+
+    /*
+     * Clear interrupt disable flag
+     */
+    private instructionCLI(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, false);
+        return 0;
+    }
+
+    /*
+     * Set interrupt disable flag
+     */
+    private instructionSEI(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, true);
         return 0;
     }
 
