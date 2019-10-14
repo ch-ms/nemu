@@ -28,6 +28,7 @@ const enum CpuConstants {
     BASE_INTERRUPT_ADDR = 0xfffe
 }
 
+// TODO: check additional cycle flags for all instructions
 class Cpu {
     // Registers
     private _a: Uint8 = 0;
@@ -309,6 +310,26 @@ class Cpu {
 
     private getFlag(flag: StatusFlags): BitValue {
         return (this._status & flag) === 0 ? 0 : 1;
+    }
+
+    /*
+     * Helper: branch on condition
+     */
+    private branchOnCondition(condition: boolean, addrRel: Uint16): 0 {
+        if (condition) {
+            this._remainingCycles += 1;
+
+            const addr = this._programCounter + addrRel;
+
+            // Stepping through page boundary requires additional clock cycle
+            if ((addr & 0xff00) !== (this._programCounter & 0xff00)) {
+                this._remainingCycles += 1;
+            }
+
+            this._programCounter = addr;
+        }
+
+        return 0;
     }
 
     /*
@@ -803,26 +824,6 @@ class Cpu {
         this._a = this._a ^ data;
         this.setZeroAndNegativeByValue(this._a);
         return 1;
-    }
-
-    /*
-     * Helper: branch on condition
-     */
-    private branchOnCondition(condition: boolean, addrRel: Uint16): 0 {
-        if (condition) {
-            this._remainingCycles += 1;
-
-            const addr = this._programCounter + addrRel;
-
-            // Stepping through page boundary requires additional clock cycle
-            if ((addr & 0xff00) !== (this._programCounter & 0xff00)) {
-                this._remainingCycles += 1;
-            }
-
-            this._programCounter = addr;
-        }
-
-        return 0;
     }
 }
 
