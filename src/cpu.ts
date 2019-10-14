@@ -272,6 +272,9 @@ class Cpu {
             case 'BIT':
                 return this.instructionBIT(addr);
 
+            case 'CMP':
+                return this.instructionCMP(addr);
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -701,6 +704,18 @@ class Cpu {
         this.setFlag(StatusFlags.ZERO, (data & this._a) === 0);
         this.setFlag(StatusFlags.NEGATIVE, (data & StatusFlags.NEGATIVE) !== 0);
         this.setFlag(StatusFlags.OVERFLOW, (data & StatusFlags.OVERFLOW) !== 0);
+        return 0;
+    }
+
+    /*
+     * Compares A with Memory
+     * Z = A = M, C = A >= M, N = A - M
+     */
+    private instructionCMP(addr: Uint16): AdditionalCycleFlag {
+        const data = this.read(addr);
+        const result = (this._a - addr) % 0xff;
+        this.setZeroAndNegativeByValue(result);
+        this.setFlag(StatusFlags.CARRY, this._a >= data);
         return 0;
     }
 
