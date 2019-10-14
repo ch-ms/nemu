@@ -239,6 +239,21 @@ class Cpu {
             case 'TYA':
                 return this.instructionTYA();
 
+            case 'TAY':
+                return this.instructionTAY();
+
+            case 'TXS':
+                return this.instructionTXS();
+
+            case 'TXA':
+                return this.instructionTXA();
+
+            case 'TAX':
+                return this.instructionTAX();
+
+            case 'TSX':
+                return this.instructionTSX();
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -562,8 +577,52 @@ class Cpu {
      * Transfer Y to A
      */
     private instructionTYA(): AdditionalCycleFlag {
-        this.setZeroAndNegativeByValue(this._a);
         this._a = this._y;
+        this.setZeroAndNegativeByValue(this._a);
+        return 0;
+    }
+
+    /*
+     * Transfer A to Y
+     */
+    private instructionTAY(): AdditionalCycleFlag {
+        this._y = this._a;
+        this.setZeroAndNegativeByValue(this._y);
+        return 0;
+    }
+
+    /*
+     * Transfer X to Stack Pointer
+     */
+    private instructionTXS(): AdditionalCycleFlag {
+        this._stackPointer = this._x;
+        return 0;
+    }
+
+    /*
+     * Transfer X to A
+     */
+    private instructionTXA(): AdditionalCycleFlag {
+        this._a = this._x;
+        this.setZeroAndNegativeByValue(this._a);
+        return 0;
+    }
+
+    /*
+     * Transfer A to X
+     */
+    private instructionTAX(): AdditionalCycleFlag {
+        this._x = this._a;
+        this.setZeroAndNegativeByValue(this._x);
+        return 0;
+    }
+
+    /*
+     * Transfer Stack Pointer to X
+     */
+    private instructionTSX(): AdditionalCycleFlag {
+        this._x = this._stackPointer;
+        this.setZeroAndNegativeByValue(this._x);
         return 0;
     }
 
