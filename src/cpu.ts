@@ -236,6 +236,9 @@ class Cpu {
             case 'BRK':
                 return this.instructionBRK();
 
+            case 'TYA':
+                return this.instructionTYA();
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -552,6 +555,15 @@ class Cpu {
         this.setFlag(StatusFlags.BREAK, false);
 
         this._programCounter = this.read(CpuConstants.BASE_INTERRUPT_ADDR) | (this.read(CpuConstants.BASE_INTERRUPT_ADDR + 1) << 8);
+        return 0;
+    }
+
+    /*
+     * Transfer Y to A
+     */
+    private instructionTYA(): AdditionalCycleFlag {
+        this.setZeroAndNegativeByValue(this._a);
+        this._a = this._y;
         return 0;
     }
 
