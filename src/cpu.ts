@@ -200,8 +200,14 @@ class Cpu {
             case 'DEY':
                 return this.instructionDEY();
 
+            case 'INY':
+                return this.instructionINY();
+
             case 'DEX':
                 return this.instructionDEX();
+
+            case 'INX':
+                return this.instructionINX();
 
             case 'BNE':
                 return this.instructionBNE(addr);
@@ -451,8 +457,18 @@ class Cpu {
      * Descrement X register
      */
     private instructionDEX(): AdditionalCycleFlag {
-        // TODO: mb bug if y is zero?
+        // TODO: need to wrap around 0xff;
         this._x -= 1;
+        this.setZeroAndNegativeByValue(this._x);
+        return 0;
+    }
+
+    /*
+     * Increment X register
+     */
+    private instructionINX(): AdditionalCycleFlag {
+        // TODO: need to wrap around 0xff;
+        this._x += 1;
         this.setZeroAndNegativeByValue(this._x);
         return 0;
     }
@@ -461,8 +477,18 @@ class Cpu {
      * Decrement Y register
      */
     private instructionDEY(): AdditionalCycleFlag {
-        // TODO: mb bug if y is zero?
+        // TODO: need to wrap around 0xff;
         this._y -= 1;
+        this.setZeroAndNegativeByValue(this._y);
+        return 0;
+    }
+
+    /*
+     * Increment Y register
+     */
+    private instructionINY(): AdditionalCycleFlag {
+        // TODO: mb bug if y is zero?
+        this._y += 1;
         this.setZeroAndNegativeByValue(this._y);
         return 0;
     }
