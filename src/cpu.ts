@@ -188,6 +188,9 @@ class Cpu {
             case 'SEI':
                 return this.instructionSEI();
 
+            case 'CLV':
+                return this.instructionCLV();
+
             case 'ADC':
                 return this.instructionADC(addr);
 
@@ -372,6 +375,14 @@ class Cpu {
      */
     private instructionSEI(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, true);
+        return 0;
+    }
+
+    /*
+     * Clear overflow flag
+     */
+    private instructionCLV(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.OVERFLOW, false);
         return 0;
     }
 
