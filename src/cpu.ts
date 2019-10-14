@@ -275,6 +275,21 @@ class Cpu {
             case 'CMP':
                 return this.instructionCMP(addr);
 
+            case 'CPX':
+                return this.instructionCPX(addr);
+
+            case 'CPY':
+                return this.instructionCPY(addr);
+
+            case 'AND':
+                return this.instructionAND(addr);
+
+            case 'ORA':
+                return this.instructionORA(addr);
+
+            case 'EOR':
+                return this.instructionEOR(addr);
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
@@ -709,14 +724,74 @@ class Cpu {
 
     /*
      * Compares A with Memory
-     * Z = A = M, C = A >= M, N = A - M
+     * Z = A == M, C = A >= M, N = A - M
      */
     private instructionCMP(addr: Uint16): AdditionalCycleFlag {
+        // TODO: same as CMP, CPX, CPY
         const data = this.read(addr);
-        const result = (this._a - addr) % 0xff;
+        const result = (this._a - data) % 0xff;
         this.setZeroAndNegativeByValue(result);
         this.setFlag(StatusFlags.CARRY, this._a >= data);
         return 0;
+    }
+
+    /*
+     * Compare X with Memory
+     * Z = X == M, C = X >= M, N = X - M
+     */
+    private instructionCPX(addr: Uint16): AdditionalCycleFlag {
+        // TODO: same as CMP, CPX, CPY
+        const data = this.read(addr);
+        const result = (this._x - data) % 0xff;
+        this.setZeroAndNegativeByValue(result);
+        this.setFlag(StatusFlags.CARRY, this._x >= data);
+        return 0;
+    }
+
+    /*
+     * Compare Y with Memory
+     * Z = Y == M, C = Y >= M, N = Y - M
+     */
+    private instructionCPY(addr: Uint16): AdditionalCycleFlag {
+        // TODO: same as CMP, CPX, CPY
+        const data = this.read(addr);
+        const result = (this._y - data) % 0xff;
+        this.setZeroAndNegativeByValue(result);
+        this.setFlag(StatusFlags.CARRY, this._y >= data);
+        return 0;
+    }
+
+    /*
+     * Logical & on A and Memory
+     * Z = A == 0, N = A < 0, A = A & M
+     */
+    private instructionAND(addr: Uint16): AdditionalCycleFlag {
+        const data = this.read(addr);
+        this._a = this._a & data;
+        this.setZeroAndNegativeByValue(this._a);
+        return 1;
+    }
+
+    /*
+     * Logical | on A and Memory
+     * Z = A == 0, N = A < 0, A = A | M
+     */
+    private instructionORA(addr: Uint16): AdditionalCycleFlag {
+        const data = this.read(addr);
+        this._a = this._a | data;
+        this.setZeroAndNegativeByValue(this._a);
+        return 1;
+    }
+
+    /*
+     * Logical ^ on A and Memory
+     * A = A ^ M, Z = A == 0, N = A < 0
+     */
+    private instructionEOR(addr: Uint16): AdditionalCycleFlag {
+        const data = this.read(addr);
+        this._a = this._a ^ data;
+        this.setZeroAndNegativeByValue(this._a);
+        return 1;
     }
 
     /*
