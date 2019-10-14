@@ -1,0 +1,33 @@
+; Subtract with abs addressing
+*=$8000
+LDX #10
+STX $0000
+LDA #5
+SBC $0000
+STA $0002
+NOP
+NOP
+NOP
+; obj
+; A2 0A 8E 00 00 A9 05 ED 00 00 EA EA EA
+
+; Multiply 10 by 3
+; See https://github.com/OneLoneCoder/olcNES/blob/master/Part%232%20-%20CPU/olcNes_Video1_6502.cpp
+*=$8000
+LDX #10
+STX $0000
+LDX #3
+STX $0001
+LDY $0000
+LDA #0
+CLC
+loop
+ADC $0001
+DEY
+BNE loop
+STA $0002
+NOP
+NOP
+NOP
+; obj
+; A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA

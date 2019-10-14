@@ -179,6 +179,9 @@ class Cpu {
             case 'ADC':
                 return this.instructionADC(addr);
 
+            case 'SBC':
+                return this.instructionSBC(addr);
+
             case 'DEY':
                 return this.instructionDEY();
 
@@ -321,6 +324,29 @@ class Cpu {
         );
 
         // Register A is 8 bit
+        this._a = result & 0xff;
+        this.setZeroAndNegativeByValue(this._a);
+
+        return 1;
+    }
+
+    /**
+     * Subtract data in addr from acc with borrow
+     * A = A - M - (1 - C)
+     * N Z C V
+     */
+    private instructionSBC(addr: Uint16): AdditionalCycleFlag {
+        const data = ~this.read(addr);
+        const result = this._a + data + this.getFlag(StatusFlags.CARRY);
+
+        // TODO: same as addition
+        // TODO: Clear if overflow in bit 7?
+        this.setFlag(StatusFlags.CARRY, result > 255);
+        this.setFlag(
+            StatusFlags.OVERFLOW,
+            Boolean((~(this._a ^ data) & (this._a ^ result)) & StatusFlags.NEGATIVE)
+        );
+
         this._a = result & 0xff;
         this.setZeroAndNegativeByValue(this._a);
 

@@ -40,7 +40,7 @@ function uint16ToHex(uint16: Uint16): string {
 
 const enum DebuggerConstants {
     BASE_PRG_ADDR = 0x8000,
-    EXAMPLE_PRG = 'A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA'
+    EXAMPLE_PRG = 'A2 0A 8E 00 00 A9 05 ED 00 00 EA EA EA'
 }
 
 class NesDebugger {
