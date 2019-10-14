@@ -179,6 +179,9 @@ class Cpu {
             case 'CLC':
                 return this.instructionCLC();
 
+            case 'SEC':
+                return this.instructionSEC();
+
             case 'CLD':
                 return this.instructionCLD();
 
@@ -405,6 +408,14 @@ class Cpu {
      */
     private instructionCLC(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.CARRY, false);
+        return 0;
+    }
+
+    /*
+     * Set carry flag
+     */
+    private instructionSEC(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.CARRY, true);
         return 0;
     }
 
