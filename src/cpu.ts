@@ -191,6 +191,27 @@ class Cpu {
             case 'BNE':
                 return this.instructionBNE(addr);
 
+            case 'BCC':
+                return this.instructionBCC(addr);
+
+            case 'BCS':
+                return this.instructionBCS(addr);
+
+            case 'BMI':
+                return this.instructionBMI(addr);
+
+            case 'BPL':
+                return this.instructionBPL(addr);
+
+            case 'BEQ':
+                return this.instructionBEQ(addr);
+
+            case 'BVC':
+                return this.instructionBVC(addr);
+
+            case 'BVS':
+                return this.instructionBVS(addr);
+
             case 'STA':
                 return this.instructionSTA(addr);
 
@@ -377,20 +398,56 @@ class Cpu {
      * Branch if not equal
      */
     private instructionBNE(addrRel: Uint16): AdditionalCycleFlag {
-        if (this.getFlag(StatusFlags.ZERO) === 0) {
-            this._remainingCycles += 1;
+        return this.branchOnCondition(this.getFlag(StatusFlags.ZERO) === 0, addrRel);
+    }
 
-            const addr = this._programCounter + addrRel;
+    /**
+     * Branch if equal
+     */
+    private instructionBEQ(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.ZERO) === 1, addrRel);
+    }
 
-            // Stepping through page boundary requires additional clock cycle
-            if ((addr & 0xff00) !== (this._programCounter & 0xff00)) {
-                this._remainingCycles += 1;
-            }
+    /**
+     * Branch if carry clear
+     */
+    private instructionBCC(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.CARRY) === 0, addrRel);
+    }
 
-            this._programCounter = addr;
-        }
+    /**
+     * Branch if carry set
+     */
+    private instructionBCS(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.CARRY) === 1, addrRel);
+    }
 
-        return 0;
+    /**
+     * Branch if minus
+     */
+    private instructionBMI(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.NEGATIVE) === 1, addrRel);
+    }
+
+    /**
+     * Branch if positive
+     */
+    private instructionBPL(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.NEGATIVE) === 0, addrRel);
+    }
+
+    /**
+     * Branch if overflow clear
+     */
+    private instructionBVC(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.OVERFLOW) === 0, addrRel);
+    }
+
+    /**
+     * Branch if overflow set
+     */
+    private instructionBVS(addrRel: Uint16): AdditionalCycleFlag {
+        return this.branchOnCondition(this.getFlag(StatusFlags.OVERFLOW) === 1, addrRel);
     }
 
     /**
@@ -440,6 +497,26 @@ class Cpu {
         this.setFlag(StatusFlags.BREAK, false);
 
         this._programCounter = this.read(CpuConstants.BASE_INTERRUPT_ADDR) | (this.read(CpuConstants.BASE_INTERRUPT_ADDR + 1) << 8);
+        return 0;
+    }
+
+    /**
+     * Helper: branch on condition
+     */
+    private branchOnCondition(condition: boolean, addrRel: Uint16): 0 {
+        if (condition) {
+            this._remainingCycles += 1;
+
+            const addr = this._programCounter + addrRel;
+
+            // Stepping through page boundary requires additional clock cycle
+            if ((addr & 0xff00) !== (this._programCounter & 0xff00)) {
+                this._remainingCycles += 1;
+            }
+
+            this._programCounter = addr;
+        }
+
         return 0;
     }
 }
