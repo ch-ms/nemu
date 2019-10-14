@@ -2,7 +2,7 @@ import {LOOKUP, InstructionMnemonic, AddrModeMnemonic} from './lookup';
 import {Bus} from './bus';
 import {Uint8, Uint16} from './types';
 
-/**
+/*
  * Cpu
  */
 
@@ -102,7 +102,7 @@ class Cpu {
         this._remainingCycles = 8;
     }
 
-    /**
+    /*
      * Perform single clock cycle
      */
     clock(): void {
@@ -175,6 +175,12 @@ class Cpu {
 
             case 'CLC':
                 return this.instructionCLC();
+
+            case 'CLD':
+                return this.instructionCLD();
+
+            case 'SED':
+                return this.instructionSED();
 
             case 'ADC':
                 return this.instructionADC(addr);
@@ -332,6 +338,22 @@ class Cpu {
     }
 
     /*
+     * Clear decimal flag
+     */
+    private instructionCLD(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.DECIMAL_MODE, false);
+        return 0;
+    }
+
+    /*
+     * Set decimal flag
+     */
+    private instructionSED(): AdditionalCycleFlag {
+        this.setFlag(StatusFlags.DECIMAL_MODE, true);
+        return 0;
+    }
+
+    /*
      * Add data in addr to acc with CARRY flag
      */
     private instructionADC(addr: Uint16): AdditionalCycleFlag {
@@ -351,7 +373,7 @@ class Cpu {
         return 1;
     }
 
-    /**
+    /*
      * Subtract data in addr from acc with borrow
      * A = A - M - (1 - C)
      * N Z C V
@@ -374,7 +396,7 @@ class Cpu {
         return 1;
     }
 
-    /**
+    /*
      * Descrement X register
      */
     private instructionDEX(): AdditionalCycleFlag {
@@ -384,7 +406,7 @@ class Cpu {
         return 0;
     }
 
-    /**
+    /*
      * Decrement Y register
      */
     private instructionDEY(): AdditionalCycleFlag {
@@ -394,63 +416,63 @@ class Cpu {
         return 0;
     }
 
-    /**
+    /*
      * Branch if not equal
      */
     private instructionBNE(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.ZERO) === 0, addrRel);
     }
 
-    /**
+    /*
      * Branch if equal
      */
     private instructionBEQ(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.ZERO) === 1, addrRel);
     }
 
-    /**
+    /*
      * Branch if carry clear
      */
     private instructionBCC(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.CARRY) === 0, addrRel);
     }
 
-    /**
+    /*
      * Branch if carry set
      */
     private instructionBCS(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.CARRY) === 1, addrRel);
     }
 
-    /**
+    /*
      * Branch if minus
      */
     private instructionBMI(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.NEGATIVE) === 1, addrRel);
     }
 
-    /**
+    /*
      * Branch if positive
      */
     private instructionBPL(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.NEGATIVE) === 0, addrRel);
     }
 
-    /**
+    /*
      * Branch if overflow clear
      */
     private instructionBVC(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.OVERFLOW) === 0, addrRel);
     }
 
-    /**
+    /*
      * Branch if overflow set
      */
     private instructionBVS(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.OVERFLOW) === 1, addrRel);
     }
 
-    /**
+    /*
      * Store accumulator at address
      */
     private instructionSTA(addr: Uint16): AdditionalCycleFlag {
@@ -458,7 +480,7 @@ class Cpu {
         return 0;
     }
 
-    /**
+    /*
      * Just nothing
      */
     private instructionNOP(opcode: Uint8): AdditionalCycleFlag {
@@ -477,7 +499,7 @@ class Cpu {
         return 0;
     }
 
-    /**
+    /*
      * Program interrupt
      */
     private instructionBRK(): AdditionalCycleFlag {
@@ -500,7 +522,7 @@ class Cpu {
         return 0;
     }
 
-    /**
+    /*
      * Helper: branch on condition
      */
     private branchOnCondition(condition: boolean, addrRel: Uint16): 0 {
