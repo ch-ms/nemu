@@ -13,7 +13,7 @@ type AddrModeReturnValue = [Uint16, AdditionalCycleFlag];
 const enum StatusFlags {
     CARRY = 1 << 0,
     ZERO = 1 << 1,
-    DISTABLE_INTERRUPTS = 1 << 2,
+    DISABLE_INTERRUPTS = 1 << 2,
     DECIMAL_MODE = 1 << 3,
     BREAK = 1 << 4,
     UNUSED = 1 << 5,
@@ -162,14 +162,17 @@ class Cpu {
     // TODO: function description
     private resolveInstruction(opcode: Uint8, mnemonic: InstructionMnemonic, addr: Uint16): AdditionalCycleFlag {
         switch (mnemonic) {
+            case 'LDA':
+                return this.instructionLDA(addr);
+
             case 'LDX':
                 return this.instructionLDX(addr);
 
             case 'LDY':
                 return this.instructionLDY(addr);
 
-            case 'LDA':
-                return this.instructionLDA(addr);
+            case 'STA':
+                return this.instructionSTA(addr);
 
             case 'STX':
                 return this.instructionSTX(addr);
@@ -222,32 +225,29 @@ class Cpu {
             case 'DEC':
                 return this.instructionDEC(addr);
 
-            case 'BNE':
-                return this.instructionBNE(addr);
-
             case 'BCC':
                 return this.instructionBCC(addr);
 
             case 'BCS':
                 return this.instructionBCS(addr);
 
+            case 'BEQ':
+                return this.instructionBEQ(addr);
+
             case 'BMI':
                 return this.instructionBMI(addr);
 
+            case 'BNE':
+                return this.instructionBNE(addr);
+
             case 'BPL':
                 return this.instructionBPL(addr);
-
-            case 'BEQ':
-                return this.instructionBEQ(addr);
 
             case 'BVC':
                 return this.instructionBVC(addr);
 
             case 'BVS':
                 return this.instructionBVS(addr);
-
-            case 'STA':
-                return this.instructionSTA(addr);
 
             case 'NOP':
                 return this.instructionNOP(opcode);
@@ -308,7 +308,7 @@ class Cpu {
         this.setFlag(StatusFlags.NEGATIVE, (value & StatusFlags.NEGATIVE) !== 0);
     }
 
-    private getFlag(flag: StatusFlags): BitValue {
+    getFlag(flag: StatusFlags): BitValue {
         return (this._status & flag) === 0 ? 0 : 1;
     }
 
@@ -378,28 +378,8 @@ class Cpu {
     }
 
     /*
-     * Load X register with data from memory, setting zero and negative flags as appropriate
-     */
-    // TODO: WTF we need additional cycle flag?
-    private instructionLDX(addr: Uint16): AdditionalCycleFlag {
-        this._x = this.read(addr);
-        this.setZeroAndNegativeByValue(this._x);
-
-        return 1;
-    }
-
-    /*
-     * Load Y register with data from memory, setting zero and negative flags as appropriate
-     */
-    private instructionLDY(addr: Uint16): AdditionalCycleFlag {
-        this._y = this.read(addr);
-        this.setZeroAndNegativeByValue(this._y);
-
-        return 1;
-    }
-
-    /*
-     * Load A register with data from memory, setting zero and negative flags as appropriate
+     * Load A register with Memory
+     * A = M, Z = A == 0, N = A <= 0
      */
     private instructionLDA(addr: Uint16): AdditionalCycleFlag {
         this._a = this.read(addr);
@@ -409,7 +389,40 @@ class Cpu {
     }
 
     /*
-     * Store X register at Memory
+     * Load X register with Memory
+     * X = M, Z = X == 0, N = X <= 0
+     */
+    private instructionLDX(addr: Uint16): AdditionalCycleFlag {
+        this._x = this.read(addr);
+        this.setZeroAndNegativeByValue(this._x);
+
+        // TODO: WTF we need additional cycle flag?
+        return 1;
+    }
+
+    /*
+     * Load Y register with Memory
+     * Y = M, Z = Y == 0, N = Y <= 0
+     */
+    private instructionLDY(addr: Uint16): AdditionalCycleFlag {
+        this._y = this.read(addr);
+        this.setZeroAndNegativeByValue(this._y);
+
+        return 1;
+    }
+
+    /*
+     * Store A at Memory
+     * M = A
+     */
+    private instructionSTA(addr: Uint16): AdditionalCycleFlag {
+        this.write(addr, this._a);
+        return 0;
+    }
+
+    /*
+     * Store X at Memory
+     * M = X
      */
     private instructionSTX(addr: Uint16): AdditionalCycleFlag {
         this.write(addr, this._x);
@@ -417,7 +430,8 @@ class Cpu {
     }
 
     /*
-     * Store Y register at Memory
+     * Store Y at Memory
+     * M = Y
      */
     private instructionSTY(addr: Uint16): AdditionalCycleFlag {
         this.write(addr, this._y);
@@ -426,6 +440,7 @@ class Cpu {
 
     /*
      * Clear carry flag
+     * CARRY = 0
      */
     private instructionCLC(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.CARRY, false);
@@ -434,6 +449,7 @@ class Cpu {
 
     /*
      * Set carry flag
+     * CARRY = 1
      */
     private instructionSEC(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.CARRY, true);
@@ -442,6 +458,7 @@ class Cpu {
 
     /*
      * Clear decimal flag
+     * DECIMAL_MODE = 0
      */
     private instructionCLD(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.DECIMAL_MODE, false);
@@ -450,6 +467,7 @@ class Cpu {
 
     /*
      * Set decimal flag
+     * DECIMAL_MODE = 1
      */
     private instructionSED(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.DECIMAL_MODE, true);
@@ -460,7 +478,7 @@ class Cpu {
      * Clear interrupt disable flag
      */
     private instructionCLI(): AdditionalCycleFlag {
-        this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, false);
+        this.setFlag(StatusFlags.DISABLE_INTERRUPTS, false);
         return 0;
     }
 
@@ -468,12 +486,13 @@ class Cpu {
      * Set interrupt disable flag
      */
     private instructionSEI(): AdditionalCycleFlag {
-        this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, true);
+        this.setFlag(StatusFlags.DISABLE_INTERRUPTS, true);
         return 0;
     }
 
     /*
      * Clear overflow flag
+     * V = 0
      */
     private instructionCLV(): AdditionalCycleFlag {
         this.setFlag(StatusFlags.OVERFLOW, false);
@@ -481,7 +500,8 @@ class Cpu {
     }
 
     /*
-     * Add data in addr to acc with CARRY flag
+     * Add A to Memory with CARRY flag
+     * A = A + M + C, Z = A == 0, C = A >= 255, N = A < 0, V = Sign(OLD_A) != Sign(A)
      */
     private instructionADC(addr: Uint16): AdditionalCycleFlag {
         const data = this.read(addr);
@@ -525,6 +545,7 @@ class Cpu {
 
     /*
      * Descrement X register
+     * X = X - 1;
      */
     private instructionDEX(): AdditionalCycleFlag {
         // TODO: need to wrap around 0xff;
@@ -535,6 +556,7 @@ class Cpu {
 
     /*
      * Increment X register
+     * X = X + 1, Z = X == 0, N = X < 0
      */
     private instructionINX(): AdditionalCycleFlag {
         // TODO: need to wrap around 0xff;
@@ -545,6 +567,7 @@ class Cpu {
 
     /*
      * Decrement Y register
+     * Y = Y - 1
      */
     private instructionDEY(): AdditionalCycleFlag {
         // TODO: need to wrap around 0xff;
@@ -555,6 +578,7 @@ class Cpu {
 
     /*
      * Increment Y register
+     * Y = Y + 1
      */
     private instructionINY(): AdditionalCycleFlag {
         // TODO: mb bug if y is zero?
@@ -565,6 +589,7 @@ class Cpu {
 
     /*
      * Increment Memory
+     * M = M + 1
      */
     private instructionINC(addr: Uint16): AdditionalCycleFlag {
         const data = (this.read(addr) + 1) % 0xff;
@@ -575,6 +600,7 @@ class Cpu {
 
     /*
      * Decrement Memory
+     * M = M - 1
      */
     private instructionDEC(addr: Uint16): AdditionalCycleFlag {
         const data = (this.read(addr) - 1) % 0xff;
@@ -592,6 +618,7 @@ class Cpu {
 
     /*
      * Branch if equal
+     * PC = PC + addrRel if Z == 0
      */
     private instructionBEQ(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.ZERO) === 1, addrRel);
@@ -613,6 +640,7 @@ class Cpu {
 
     /*
      * Branch if minus
+     * PC = PC + addrRel if N != 0
      */
     private instructionBMI(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.NEGATIVE) === 1, addrRel);
@@ -620,6 +648,7 @@ class Cpu {
 
     /*
      * Branch if positive
+     * PC = PC + addrRel if N == 0
      */
     private instructionBPL(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.NEGATIVE) === 0, addrRel);
@@ -637,14 +666,6 @@ class Cpu {
      */
     private instructionBVS(addrRel: Uint16): AdditionalCycleFlag {
         return this.branchOnCondition(this.getFlag(StatusFlags.OVERFLOW) === 1, addrRel);
-    }
-
-    /*
-     * Store accumulator at address
-     */
-    private instructionSTA(addr: Uint16): AdditionalCycleFlag {
-        this.write(addr, this._a);
-        return 0;
     }
 
     /*
@@ -678,7 +699,7 @@ class Cpu {
         this.write(CpuConstants.BASE_STACK_ADDR + this._stackPointer, this._programCounter & 0x00ff);
         this._stackPointer -= 1;
 
-        this.setFlag(StatusFlags.DISTABLE_INTERRUPTS, true);
+        this.setFlag(StatusFlags.DISABLE_INTERRUPTS, true);
         this.setFlag(StatusFlags.BREAK, true);
         this.write(CpuConstants.BASE_STACK_ADDR + this._stackPointer, this._status);
         this._stackPointer -= 1;
@@ -827,4 +848,4 @@ class Cpu {
     }
 }
 
-export {Cpu, CpuConstants};
+export {Cpu, CpuConstants, StatusFlags};

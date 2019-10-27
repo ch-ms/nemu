@@ -1,8 +1,12 @@
-const output = `${__dirname}/build`;
+const glob = require("glob");
 
-module.exports = {
+const outputSrc = `${__dirname}/build/src`;
+const outputTests = `${__dirname}/build/tests`;
+
+const srcConfig = {
+    name: 'src',
     entry: {
-        'cpu-debugger': './src/cpu-debugger.ts'
+        'cpu-debugger-ui': './src/cpu-debugger-ui.ts'
     },
     resolve: {
         extensions: ['.ts']
@@ -24,7 +28,22 @@ module.exports = {
     devtool: 'source-map',
     mode: 'development',
     output: {
-        path: output,
+        path: outputSrc,
         filename: '[name].js'
     }
-}
+};
+
+const testsConfig = {
+    ...srcConfig,
+    name: 'tests',
+    entry: {
+        'bundle.test': glob.sync('./tests/*.test.ts')
+    },
+    devtool: false,
+    output: {
+        path: outputTests,
+        filename: '[name].js'
+    }
+};
+
+module.exports = [srcConfig, testsConfig];
