@@ -1,0 +1,36 @@
+<html>
+    <head>
+        <title>NesEmu debugger</title>
+        <script src="../build/src/emulator-debugger.js"></script>
+        <link rel="stylesheet" href="./index.css"></link>
+    </head>
+    <body>
+        <div id="emulator-debugger">
+            <div class="cartridge-slot">
+                <div>
+                    <input id="cartridge-input" type="file" accept=".nes"></input>
+                </div>
+            </div>
+            <div class="screen">
+                <canvas width="341" height="262" id="canvas"></canvas>
+            </div>
+            <pre class="status-explorer">
+            </pre>
+            <pre class="program-explorer">
+            </pre>
+            <div class="memory-explorer">
+                <div class="memory-explorer__page-selector">
+                    <select name="page-selector"></select>
+                </div>
+                <pre class="memory-explorer__content">
+                </pre>
+            </div>
+            <div class="controls">
+                <button name="run">Run</button>
+                <button name="pause">Pause</button>
+                <button name="step-instruction">Step instruction</button>
+                <button name="reset">Reset</button>
+            </div>
+        </div>
+    </body>
+</html>

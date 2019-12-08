@@ -6,7 +6,8 @@ const outputTests = `${__dirname}/build/tests`;
 const srcConfig = {
     name: 'src',
     entry: {
-        'cpu-debugger-ui': './src/cpu-debugger-ui.ts'
+        'cpu-debugger-ui': './src/cpu-debugger-ui.ts',
+        'emulator-debugger': './src/emulator-debugger/emulator-debugger.ts'
     },
     resolve: {
         extensions: ['.ts']
@@ -36,6 +37,10 @@ const srcConfig = {
 const testsConfig = {
     ...srcConfig,
     name: 'tests',
+    target: 'node',
+    node: {
+        fs: "empty"
+    },
     entry: {
         'bundle.test': glob.sync('./tests/*.test.ts')
     },

@@ -9,7 +9,11 @@ build-watch-src:
 
 .PHONY: eslint-src
 eslint-src:
-	@$$(npm bin)/eslint src/*
+	@$$(npm bin)/eslint src/*.ts src/**/*.ts
+
+.PHONY: eslint-tests
+eslint-tests:
+	@$$(npm bin)/eslint tests/*.test.ts
 
 .PHONY: tslint
 tslint:
@@ -22,7 +26,13 @@ lint-src:
 
 .PHONY: lint-tests
 lint-tests:
-	@$$(npm bin)/eslint tests/*.test.ts
+	@make eslint-tests
+	@make tslint
+
+.PHONY: lint
+lint:
+	@make eslint-src
+	@make eslint-tests
 	@make tslint
 
 .PHONY: build-tests

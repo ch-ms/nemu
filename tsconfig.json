@@ -5,10 +5,12 @@
         "noImplicitReturns": true,
         "target": "es6",
         "module": "commonjs",
-        "sourceMap": true
+        "sourceMap": true,
+        "resolveJsonModule": true
     },
     "include": [
         "src/*",
+        "src/**/*",
         "tests/*"
     ]
 }

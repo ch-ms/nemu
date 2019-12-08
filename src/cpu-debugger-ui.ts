@@ -1,41 +1,11 @@
-import {Uint16, Uint8} from './types';
-import {LOOKUP} from './lookup';
+import {Uint16} from './types';
 import {CpuDebugger} from './cpu-debugger';
-
-function* iterateRam(startAddr: Uint16, endAddr: Uint16): IterableIterator<number> {
-    for (let addr = startAddr; addr <= endAddr; addr++) {
-        yield addr;
-    }
-}
-
-function* iteratePage(addrInPage: Uint16): IterableIterator<number> {
-    const pageAddr = addrInPage & 0xff00;
-    for (const addr of iterateRam(pageAddr, pageAddr + 0xff)) {
-        yield addr;
-    }
-}
-
-function stuffWithZeros(str: string, size: number): string {
-    if (str.length >= size) {
-        return str;
-    }
-
-    while (str.length !== size) {
-        str = `0${str}`;
-    }
-
-    return str;
-}
-
-function uint8ToHex(uint8: Uint8): string {
-    const hex = uint8.toString(16);
-    return stuffWithZeros(hex, 2);
-}
-
-function uint16ToHex(uint16: Uint16): string {
-    const hex = uint16.toString(16);
-    return stuffWithZeros(hex, 4);
-}
+import {
+    cpuStatusToFormattedString,
+    uint8ToHex,
+    iteratePage
+} from './utils/utils';
+import {CpuProgramView} from './emulator-debugger/cpu-program-view';
 
 const enum CpuDebuggerUIConstants {
     EXAMPLE_PRG = 'A2 0A 8E 00 00 A9 05 ED 00 00 EA EA EA'
@@ -48,8 +18,9 @@ class CpuDebuggerUI {
     private readonly page00: Element;
     private readonly page80: Element;
     private readonly status: Element;
-    private readonly program: Element;
     private readonly programData: HTMLTextAreaElement;
+
+    private readonly cpuProgramView: CpuProgramView;
 
     private readonly cpuDebugger: CpuDebugger;
 
@@ -61,8 +32,9 @@ class CpuDebuggerUI {
         this.page00 = container.querySelector('#page00')!;
         this.page80 = container.querySelector('#page80')!;
         this.status = this.container.querySelector('#status')!;
-        this.program = this.container.querySelector('#program')!;
         this.programData = this.container.querySelector('#program-data')! as HTMLTextAreaElement;
+
+        this.cpuProgramView = new CpuProgramView(this.container.querySelector('#program') as HTMLElement);
 
         this.btnStep.addEventListener('click', this.onBtnStepClick);
         this.btnReset.addEventListener('click', this.onBtnResetClick);
@@ -96,7 +68,7 @@ class CpuDebuggerUI {
         this.renderPage00();
         this.renderPage80();
         this.renderStatus();
-        this.renderProgram();
+        this.cpuProgramView.render(this.cpuDebugger.cpu, this.cpuDebugger.bus);
     }
 
     private renderPage(addrInPage: Uint16, element: Element): void {
@@ -110,13 +82,14 @@ class CpuDebuggerUI {
                 result.push(' ');
             }
 
-            result.push(uint8ToHex(this.cpuDebugger.nes.bus.read(addr)));
+            result.push(uint8ToHex(this.cpuDebugger.bus.read(addr)));
             byteNum++;
         }
 
         element.innerHTML = result.join('');
     }
 
+    // TODO Use memory view
     private renderPage00(): void {
         this.renderPage(0x0000, this.page00);
     }
@@ -126,34 +99,7 @@ class CpuDebuggerUI {
     }
 
     private renderStatus(): void {
-        const result = [
-            `       NVUBDIZC`,
-            `Flags: ${stuffWithZeros(this.cpuDebugger.nes.cpu.status.toString(2), 8)} `,
-            `PC: $${uint16ToHex(this.cpuDebugger.nes.cpu.programCounter)}`,
-            `SP: $${uint8ToHex(this.cpuDebugger.nes.cpu.stackPointer)}`,
-            `A: $${uint8ToHex(this.cpuDebugger.nes.cpu.a)}`,
-            `X: $${uint8ToHex(this.cpuDebugger.nes.cpu.x)}`,
-            `Y: $${uint8ToHex(this.cpuDebugger.nes.cpu.y)}`
-        ];
-
-        this.status.innerHTML = result.join('\n');
-    }
-
-    // TODO: make real disassembler
-    private renderProgram(): void {
-        const result = [];
-        const startAddr = this.cpuDebugger.nes.cpu.programCounter;
-        for (const addr of iterateRam(startAddr, this.cpuDebugger.nes.cpu.programCounter + 15)) {
-            const byte = this.cpuDebugger.nes.bus.read(addr);
-            if (addr === startAddr) {
-                const [instructionMnemonic, addrModeMnemonic] = LOOKUP[byte];
-                result.push(`${instructionMnemonic} (${addrModeMnemonic})`);
-            } else {
-                result.push(uint8ToHex(byte));
-            }
-        }
-
-        this.program.innerHTML = result.join(' ');
+        this.status.innerHTML = cpuStatusToFormattedString(this.cpuDebugger.cpu);
     }
 }
 

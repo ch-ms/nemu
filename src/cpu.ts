@@ -1,5 +1,5 @@
 import {LOOKUP, InstructionMnemonic, AddrModeMnemonic} from './lookup';
-import {Bus} from './bus';
+import {Bus} from './interfaces';
 import {Uint8, Uint16} from './types';
 
 /*
@@ -72,6 +72,12 @@ class Cpu {
 
     get remainingCycles(): number {
         return this._remainingCycles;
+    }
+
+    skipCycles(): void {
+        while (this.remainingCycles !== 0) {
+            this.clock();
+        }
     }
 
     read(addr: Uint16): Uint8 {

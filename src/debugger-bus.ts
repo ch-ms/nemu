@@ -1,13 +1,7 @@
-import {Cpu} from './cpu';
 import {Uint8, Uint16} from './types';
+import {Bus} from './interfaces';
 
-/**
- * Bus contains various devices
- */
-
-class Bus {
-    private readonly _cpu = new Cpu(this);
-    // cpu can only address 64k range
+class DebuggerBus implements Bus {
     private readonly _ram = new Uint8Array(64 * 1024);
 
     write(addr: Uint16, data: Uint8): void {
@@ -28,4 +22,4 @@ class Bus {
     }
 }
 
-export {Bus};
+export {DebuggerBus};

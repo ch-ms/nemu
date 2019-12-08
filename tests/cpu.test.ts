@@ -1,6 +1,5 @@
 import {CpuDebugger} from '../src/cpu-debugger';
 import {StatusFlags} from '../src/cpu';
-import {LOOKUP} from '../src/lookup';
 
 interface CpuStatus {
     a?: number;
@@ -11,16 +10,12 @@ interface CpuStatus {
     programCounter?: number;
 }
 
-function createCpuDebugger(): CpuDebugger {
-    return new CpuDebugger();
-}
-
 describe('Cpu', () => {
     let cpuDebugger = new CpuDebugger();
-    let {cpu, bus} = cpuDebugger.nes;
+    let {cpu, bus} = cpuDebugger;
     let initialProgramAddress = cpu.programCounter;
 
-    function checkCpuStatus(program: string, skipOperations: number, cpuStatus: CpuStatus) {
+    function checkCpuStatus(program: string, skipOperations: number, cpuStatus: CpuStatus): void {
         cpuDebugger.loadProgram(program);
         cpuDebugger.executeNInstructions(skipOperations);
 
@@ -54,8 +49,8 @@ describe('Cpu', () => {
     beforeEach(() => {
         cpuDebugger = new CpuDebugger();
         cpuDebugger.reset();
-        cpu = cpuDebugger.nes.cpu;
-        bus = cpuDebugger.nes.bus;
+        cpu = cpuDebugger.cpu;
+        bus = cpuDebugger.bus;
         initialProgramAddress = cpu.programCounter;
     });
 
@@ -119,10 +114,12 @@ describe('Cpu', () => {
 
     describe('instructionST*', () => {
         it.skip('Store A by ZP0', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 3;
         });
 
         it.skip('Store X by ZPX', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 4;
         });
 
@@ -140,18 +137,22 @@ describe('Cpu', () => {
         });
 
         it.skip('Store A by ABX', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 5;
         });
 
         it.skip('Store X by ABY', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 5;
         });
 
         it.skip('Store Y by INX', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 6;
         });
 
         it.skip('Store A by INY', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 6;
         });
     });
@@ -300,10 +301,12 @@ describe('Cpu', () => {
         });
 
         it.skip('Sub two numbers with ZPO', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 3;
         });
 
         it.skip('Add two numbers with ZPX', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 4;
         });
 
@@ -327,22 +330,27 @@ describe('Cpu', () => {
         });
 
         it.skip('Add two numbers with ABX', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 4;
         });
 
         it.skip('Sub two numbers with ABX with page crossed', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 5;
         });
 
         it.skip('Add two numbers with INX', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 6;
         });
 
         it.skip('Sub two numbers with INY', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 5;
         });
 
         it.skip('Add two numbers with INY with page crossed', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const cycles = 6;
         });
     });
