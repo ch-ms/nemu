@@ -2,7 +2,7 @@ import {Uint8, Uint16} from './numbers';
 import {Device} from './interfaces';
 import {CartridgeData} from './cartridge-parser';
 import {createMapper, Mapper} from './mapper';
-import {MirroringModes} from './mirroring-modes';
+import {MirroringMode} from './mirroring-mode';
 
 /**
  * Cartridge contains game data
@@ -11,12 +11,12 @@ import {MirroringModes} from './mirroring-modes';
 class Cartridge implements Device {
     private readonly mapper: Mapper;
 
+    readonly mirroringMode: MirroringMode;
+
     constructor(private readonly cartridgeData: CartridgeData) {
         this.mapper = createMapper(cartridgeData.header);
-    }
 
-    get mirroring(): MirroringModes {
-        return this.cartridgeData.header.mirroring;
+        this.mirroringMode = this.cartridgeData.header.mirroring;
     }
 
     read(addr: Uint16): Uint8 {

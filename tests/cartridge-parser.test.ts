@@ -1,6 +1,6 @@
 import {parseCartridge} from '../src/cartridge-parser';
 import {Constants} from '../src/constants';
-import {MirroringModes} from '../src/mirroring-modes';
+import {MirroringMode} from '../src/mirroring-mode';
 
 import * as nestestJson from '../data/nestest.nes.json';
 const nestestRom = new Uint8Array(nestestJson).buffer;
@@ -8,7 +8,7 @@ const nestestRom = new Uint8Array(nestestJson).buffer;
 describe('Cartridge parser', () => {
     it('parse nestest.nes right', () => {
         const {header, prgRom, chrRom} = parseCartridge(nestestRom);
-        expect(header).toEqual({prgSize16K: 1, chrSize8K: 1, mapper: 0, haveTrainer: false, mirroring: MirroringModes.HORIZONTAL});
+        expect(header).toEqual({prgSize16K: 1, chrSize8K: 1, mapper: 0, haveTrainer: false, mirroring: MirroringMode.HORIZONTAL});
         expect(prgRom.length).toEqual(16 * Constants.KILOBYTE);
         expect(chrRom.length).toEqual(8 * Constants.KILOBYTE);
     });

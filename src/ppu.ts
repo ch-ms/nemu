@@ -3,7 +3,7 @@ import {Device} from './interfaces';
 import {Cartridge} from './cartridge';
 import {ppuPalette} from './ppu-palette';
 import {Color} from './color';
-import {MirroringModes} from './mirroring-modes';
+import {MirroringMode} from './mirroring-mode';
 import {Constants} from './constants';
 import {LoopyRegister} from './loopy-register';
 
@@ -560,16 +560,16 @@ class Ppu implements Device {
 
     private mirrorNametable(addr: Uint16): {nametable: Uint8Array, index: number} {
         if (
-            this.cartridge.mirroring !== MirroringModes.HORIZONTAL &&
-            this.cartridge.mirroring !== MirroringModes.VERTICAL
+            this.cartridge.mirroringMode !== MirroringMode.HORIZONTAL &&
+            this.cartridge.mirroringMode !== MirroringMode.VERTICAL
         ) {
-            const msg = `Only horizontal and vertical mirroring modes are supported, got ${this.cartridge.mirroring}`;
+            const msg = `Only horizontal and vertical mirroring modes are supported, got ${this.cartridge.mirroringMode}`;
             throw new Error(msg);
         }
 
         addr %= 0x3000;
         const index = addr % PpuConstants.NAMETABLE_SIZE;
-        const isHorizontal = this.cartridge.mirroring === MirroringModes.HORIZONTAL;
+        const isHorizontal = this.cartridge.mirroringMode === MirroringMode.HORIZONTAL;
         if (addr < 0x2400) {
             return {nametable: this.nametable0, index};
         } else if (addr >= 0x2400 && addr < 0x2800) {

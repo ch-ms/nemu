@@ -1,8 +1,8 @@
-const enum MirroringModes {
+const enum MirroringMode {
     HORIZONTAL,
     VERTICAL,
     SINGLE_SCREEN,
     FOUR_SCREEN
 }
 
-export {MirroringModes};
+export {MirroringMode};

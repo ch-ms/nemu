@@ -1,4 +1,4 @@
-import {MirroringModes} from './mirroring-modes';
+import {MirroringMode} from './mirroring-mode';
 
 interface CartridgeHeader {
     prgSize16K: number;
@@ -52,7 +52,7 @@ function parseHeader(data: Uint8Array): CartridgeHeader {
     const mapper = hiMapper | (loMapper >> 4);
 
     const mirroring = (flags6 & 0x1) === 0 ?
-        MirroringModes.HORIZONTAL : MirroringModes.VERTICAL;
+        MirroringMode.HORIZONTAL : MirroringMode.VERTICAL;
 
     return {
         prgSize16K,
