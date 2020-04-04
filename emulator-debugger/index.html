@@ -11,6 +11,12 @@
                     <input id="cartridge-input" type="file" accept=".nes"></input>
                 </div>
             </div>
+            <div class="controls">
+                <button name="run">Run</button>
+                <button name="pause">Pause</button>
+                <button name="step-instruction">Step instruction</button>
+                <button name="reset">Reset</button>
+            </div>
             <div class="screen">
                 <canvas width="341" height="262" id="canvas"></canvas>
             </div>
@@ -41,12 +47,8 @@
                 <pre class="memory-explorer__content">
                 </pre>
             </div>
-            <div class="controls">
-                <button name="run">Run</button>
-                <button name="pause">Pause</button>
-                <button name="step-instruction">Step instruction</button>
-                <button name="reset">Reset</button>
-            </div>
+            <pre class="oam-view" data-view="oam">
+            </pre>
         </div>
     </body>
 </html>

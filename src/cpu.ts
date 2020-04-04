@@ -2,8 +2,6 @@ import {LOOKUP, InstructionMnemonic, AddrModeMnemonic} from './lookup';
 import {Bus} from './interfaces';
 import {Uint8, Uint16, Numbers} from './numbers';
 
-// TODO adressing mode sometimes target accumulator register
-// TODO logical shift right everywhere
 // TODO why BRK has IMM mode?
 
 /*
@@ -119,19 +117,48 @@ class Cpu {
     }
 
     /**
+     * Interrupt
+     * Push program counter, status flags to the stack
+     * Read program counter from specific address then jumps
+     */
+    irq(): void {
+        // TODO same as BRK and NMI
+        // TODO test
+        if (this.getFlag(StatusFlags.DISABLE_INTERRUPTS)) {
+            return;
+        }
+
+        this.pushProgramCounterToStack();
+
+        // Set status flags and write status register to the stack
+        // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
+        this.setFlag(StatusFlags.BREAK, false);
+        this.setFlag(StatusFlags.UNUSED, true);
+        this.setFlag(StatusFlags.DISABLE_INTERRUPTS, true);
+        this.pushToStack(this._status);
+
+        // Read add from 0xfffa and set pc to that addr
+        const lo = this.read(CpuConstants.BASE_INTERRUPT_ADDR);
+        const hi = this.read(CpuConstants.BASE_INTERRUPT_ADDR + 1);
+        this._programCounter = (hi << 8) | lo;
+
+        this._remainingCycles = 7;
+    }
+
+    /**
      * Non maskable interupt
      * Pushes the processor status register and return address on the stack, reads the NMI handler's address from $FFFA-$FFFB
      */
     nmi(): void {
         // Write return addr to the stack
-        this.pushToStack((this._programCounter >>> 8) & 0xff);
-        this.pushToStack(this._programCounter & 0xff);
+        this.pushProgramCounterToStack();
 
         // Set status flags and write status register to the stack
+        // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
         this.setFlag(StatusFlags.BREAK, false);
         this.setFlag(StatusFlags.UNUSED, true);
         this.setFlag(StatusFlags.DISABLE_INTERRUPTS, true);
-        this.pushToStack(this.status);
+        this.pushToStack(this._status);
 
         // Read add from 0xfffa and set pc to that addr
         const lo = this.read(CpuConstants.BASE_NMI_ADDR);
@@ -149,7 +176,7 @@ class Cpu {
             // Read opcode from rProgramCounter
             // TODO: mb read from pc and inc?
             const opcode = this.read(this._programCounter);
-            this._programCounter++;
+            this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
 
             // Set flag UNUSED
             this.setFlag(StatusFlags.UNUSED, true);
@@ -342,13 +369,13 @@ class Cpu {
                 return this.instructionBIT(addr);
 
             case 'CMP':
-                return this.instructionCMP(addr);
+                return this.instructionPseudoCMX(addr, this._a);
 
             case 'CPX':
-                return this.instructionCPX(addr);
+                return this.instructionPseudoCMX(addr, this._x);
 
             case 'CPY':
-                return this.instructionCPY(addr);
+                return this.instructionPseudoCMX(addr, this._y);
 
             case 'AND':
                 return this.instructionAND(addr);
@@ -395,13 +422,57 @@ class Cpu {
             case 'RTI':
                 return this.instructionRTI();
 
+            case 'LAX':
+                return this.instructionIllegalLAX(addrModeMnemonic, addr);
+
+            case 'SAX':
+                return this.instructionIllegalSAX(addr);
+
+            case 'DCP':
+                return this.instructionIllegalDCP(addr);
+
+            case 'ISC':
+                return this.instructionIllegalISC(addr);
+
+            case 'SLO':
+                return this.instructionIllegalSLO(addrModeMnemonic, addr);
+
+            case 'RLA':
+                return this.instructionIllegalRLA(addrModeMnemonic, addr);
+
+            case 'SRE':
+                return this.instructionIllegalSRE(addrModeMnemonic, addr);
+
+            case 'RRA':
+                return this.instructionIllegalRRA(addrModeMnemonic, addr);
+
+            case 'ALR':
+                return this.instructionIllegalALR(addrModeMnemonic, addr);
+            case 'ANC':
+                return this.instructionIllegalANC(addr);
+
+            case 'XAA':
+            case 'LAS':
+            case 'STP':
+            case 'AXS':
+            case 'ARR':
+            case 'AHX':
+            case 'TAS':
+            case 'SHX':
+                return this.instructionIllegal();
+
             default:
                 throw new Error(`Unknown instruction "${mnemonic}"`);
         }
     }
 
+    // TODO make it better
+    setFlagDebug(flag: StatusFlags, isSet: boolean): void {
+        this.setFlag(flag, isSet);
+    }
+
     private setFlag(flag: StatusFlags, isSet: boolean): void {
-        this._status = isSet ? this._status | flag : this._status & ~flag;
+        this._status = isSet ? this._status | flag : (this._status & ~flag) & Numbers.UINT8_CAST;
     }
 
     private setZeroAndNegativeByValue(value: Uint8): void {
@@ -410,7 +481,7 @@ class Cpu {
     }
 
     getFlag(flag: StatusFlags): BitValue {
-        return (this._status & flag) === 0 ? 0 : 1;
+        return (this._status & flag) && 1;
     }
 
     /*
@@ -435,21 +506,23 @@ class Cpu {
 
     private pushToStack(data: Uint8): void {
         this.write(this.stackAddr, data);
-        this._stackPointer--;
+        this._stackPointer = (this._stackPointer - 1) & Numbers.UINT8_CAST;
     }
 
-    private popFromStack(): Uint8 {
-        this._stackPointer++;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private popFromStack(vector: string): Uint8 {
+        //console.log('pop', vector);
+        this._stackPointer = (this._stackPointer + 1) & Numbers.UINT8_CAST;
         return this.read(this.stackAddr);
     }
 
     private pushProgramCounterToStack(): void {
-        this.pushToStack((this._programCounter >> 8) & 0xff);
-        this.pushToStack(this._programCounter & 0xff);
+        this.pushToStack((this._programCounter >>> 8) & Numbers.UINT8_CAST);
+        this.pushToStack(this._programCounter & Numbers.UINT8_CAST);
     }
 
     private popProgramCounterFromStack(): Uint16 {
-        return this.popFromStack() | (this.popFromStack() << 8);
+        return this.popFromStack('pc') | (this.popFromStack('pc') << 8);
     }
 
     /**
@@ -457,7 +530,7 @@ class Cpu {
      */
     private addrModeIMM(): AddrModeReturnValue {
         const addr = this._programCounter;
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
         // TODO addr must be addr
         return [addr, 0];
     }
@@ -467,9 +540,9 @@ class Cpu {
      */
     private addrModeABOffset(offset: Uint8): AddrModeReturnValue {
         const lo = this.read(this._programCounter);
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
         const page = this.read(this._programCounter);
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
         let addr = (page << 8) | lo;
 
         if (offset === 0) {
@@ -486,7 +559,7 @@ class Cpu {
      */
     private addrModeZPOffset(offset: Uint8): AddrModeReturnValue {
         const addr = (this.read(this._programCounter) + offset) & Numbers.UINT8_CAST;
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
 
         return [addr, 0];
     }
@@ -505,7 +578,7 @@ class Cpu {
      */
     private addrModeREL(): AddrModeReturnValue {
         let addrRelative: Uint16 = 0x0000 | this.read(this._programCounter);
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
         if (addrRelative & 0x80) {
             addrRelative = -256 + addrRelative;
         }
@@ -520,10 +593,10 @@ class Cpu {
      */
     private addrModeIZY(): AddrModeReturnValue {
         const offset = this.read(this._programCounter);
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
 
         const lo = this.read(offset);
-        const page = this.read(offset + 1);
+        const page = this.read((offset + 1) & Numbers.UINT8_CAST);
         const addr = (((page << 8) | lo) + this._y) & Numbers.UINT16_CAST;
 
         return [addr, page === (addr & 0xff00) ? 0 : 1];
@@ -535,7 +608,7 @@ class Cpu {
      */
     private addrModeIZX(): AddrModeReturnValue {
         const offset = this.read(this._programCounter) + this._x;
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
 
         const lo = this.read(offset & 0xff);
         const hi = this.read((offset + 1) & 0xff);
@@ -551,9 +624,9 @@ class Cpu {
      */
     private addrModeIND(): AddrModeReturnValue {
         const targetLo = this.read(this._programCounter);
-        this._programCounter++;
-        const targetHi = this.read((this._programCounter + 1) & Numbers.UINT8_CAST) << 8;
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
+        const targetHi = this.read(this._programCounter) << 8;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
         const target = targetHi | targetLo;
 
         const lo = this.read(target);
@@ -582,7 +655,6 @@ class Cpu {
         this._x = this.read(addr);
         this.setZeroAndNegativeByValue(this._x);
 
-        // TODO: WTF we need additional cycle flag?
         return 1;
     }
 
@@ -694,6 +766,7 @@ class Cpu {
         const result = this._a + data + this.getFlag(StatusFlags.CARRY);
 
         this.setFlag(StatusFlags.CARRY, result > 255);
+        // TODO doc this trick
         this.setFlag(
             StatusFlags.OVERFLOW,
             Boolean((~(this._a ^ data) & (this._a ^ result)) & StatusFlags.NEGATIVE)
@@ -712,12 +785,14 @@ class Cpu {
      * N Z C V
      */
     private instructionSBC(addr: Uint16): AdditionalCycleFlag {
-        const data = ~this.read(addr);
-        const result = this._a + data + this.getFlag(StatusFlags.CARRY);
+        // ^ 0xff flip lo 8 bits, can use ~ but it will flip all bits in 32 bit int
+        const data = this.read(addr) ^ 0xff;
+        // M ^ 0xff = -M - 1
+        // So: A - M - (1 - C) = A - M - 1 + C = A + (M ^ 0xff) + C
+        const result: Uint16 = this._a + data + this.getFlag(StatusFlags.CARRY);
 
-        // TODO: same as addition
-        // TODO: Clear if overflow in bit 7?
-        this.setFlag(StatusFlags.CARRY, result > 255);
+        this.setFlag(StatusFlags.CARRY, (result & 0xff00) !== 0);
+        // See explanation in instructionADC
         this.setFlag(
             StatusFlags.OVERFLOW,
             Boolean((~(this._a ^ data) & (this._a ^ result)) & StatusFlags.NEGATIVE)
@@ -875,14 +950,17 @@ class Cpu {
      * Program interrupt
      */
     private instructionBRK(): AdditionalCycleFlag {
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
 
         this.pushProgramCounterToStack();
 
+        // Always set BREAK and UNUSED flag
+        // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
         this.setFlag(StatusFlags.DISABLE_INTERRUPTS, true);
         this.setFlag(StatusFlags.BREAK, true);
+        this.setFlag(StatusFlags.UNUSED, true);
         this.pushToStack(this._status);
-        // TODO: why?
+
         this.setFlag(StatusFlags.BREAK, false);
 
         this._programCounter = this.read(CpuConstants.BASE_INTERRUPT_ADDR) | (this.read(CpuConstants.BASE_INTERRUPT_ADDR + 1) << 8);
@@ -893,10 +971,10 @@ class Cpu {
      * Return from interrupt
      */
     private instructionRTI(): AdditionalCycleFlag {
-        // TODO why ~BREAK & ~ UNUSED?
-        this._status = this.popFromStack();
+        this._status = this.popFromStack('RTI');
+        // Strange things with BREAK & UNUSED
+        // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
         this.setFlag(StatusFlags.BREAK, false);
-        // TODO why reset unused flag if clock set it anyway?
         this.setFlag(StatusFlags.UNUSED, false);
         this._programCounter = this.popProgramCounterFromStack();
         return 0;
@@ -967,42 +1045,18 @@ class Cpu {
         return 0;
     }
 
-    /*
-     * Compares A with Memory
-     * Z = A == M, C = A >= M, N = A - M
+    /**
+     * Pseudo instruction, combines logic for CMP, CPX, CPY
+     * CMP: Compares A with Memory
+     * CPX: Compare X with Memory
+     * CPY: Compare Y with Memory
+     * Z = register == M, C = register >= M, N = register - M
      */
-    private instructionCMP(addr: Uint16): AdditionalCycleFlag {
-        // TODO: same as CMP, CPX, CPY
+    private instructionPseudoCMX(addr: Uint16, register: Uint16): AdditionalCycleFlag {
         const data = this.read(addr);
-        const result = (this._a - data) % 0xff;
-        this.setZeroAndNegativeByValue(result);
-        this.setFlag(StatusFlags.CARRY, this._a >= data);
-        return 0;
-    }
-
-    /*
-     * Compare X with Memory
-     * Z = X == M, C = X >= M, N = X - M
-     */
-    private instructionCPX(addr: Uint16): AdditionalCycleFlag {
-        // TODO: same as CMP, CPX, CPY
-        const data = this.read(addr);
-        const result = (this._x - data) % 0xff;
-        this.setZeroAndNegativeByValue(result);
-        this.setFlag(StatusFlags.CARRY, this._x >= data);
-        return 0;
-    }
-
-    /*
-     * Compare Y with Memory
-     * Z = Y == M, C = Y >= M, N = Y - M
-     */
-    private instructionCPY(addr: Uint16): AdditionalCycleFlag {
-        // TODO: same as CMP, CPX, CPY
-        const data = this.read(addr);
-        const result = (this._y - data) % 0xff;
-        this.setZeroAndNegativeByValue(result);
-        this.setFlag(StatusFlags.CARRY, this._y >= data);
+        const result: Uint16 = (register - data) & Numbers.UINT16_CAST;
+        this.setZeroAndNegativeByValue(result & Numbers.UINT8_CAST);
+        this.setFlag(StatusFlags.CARRY, register >= data);
         return 0;
     }
 
@@ -1022,9 +1076,7 @@ class Cpu {
      * Z = A == 0, N = A < 0, A = A | M
      */
     private instructionORA(addr: Uint16): AdditionalCycleFlag {
-        // TODO ORA can operate on accumulator
-        const data = this.read(addr);
-        this._a = this._a | data;
+        this._a |= this.read(addr);
         this.setZeroAndNegativeByValue(this._a);
         return 1;
     }
@@ -1045,7 +1097,7 @@ class Cpu {
      * Pushes the addr of the return point to the stack. Set program counter to given addr.
      */
     private instructionJSR(addr: Uint16): AdditionalCycleFlag {
-        this._programCounter--;
+        this._programCounter = (this._programCounter - 1) & Numbers.UINT16_CAST;
         this.pushProgramCounterToStack();
         this._programCounter = addr;
         return 0;
@@ -1062,7 +1114,7 @@ class Cpu {
      */
     private instructionRTS(): AdditionalCycleFlag {
         this._programCounter = this.popProgramCounterFromStack();
-        this._programCounter++;
+        this._programCounter = (this._programCounter + 1) & Numbers.UINT16_CAST;
         return 0;
     }
 
@@ -1078,6 +1130,8 @@ class Cpu {
      * Push a copy of the Status Register to the Stack
      */
     private instructionPHP(): AdditionalCycleFlag {
+        // Always set BREAK and UNUSED flag
+        // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
         this.setFlag(StatusFlags.BREAK, true);
         this.setFlag(StatusFlags.UNUSED, true);
         this.pushToStack(this._status);
@@ -1091,7 +1145,7 @@ class Cpu {
      * Z = A == 0, N = A < 0
      */
     private instructionPLA(): AdditionalCycleFlag {
-        this._a = this.popFromStack();
+        this._a = this.popFromStack('PLA');
         this.setZeroAndNegativeByValue(this._a);
         return 0;
     }
@@ -1100,8 +1154,11 @@ class Cpu {
      * Pulls value from the Stack to the Status
      */
     private instructionPLP(): AdditionalCycleFlag {
-        this._status = this.popFromStack();
-        this.setFlag(StatusFlags.UNUSED, true);
+        this._status = this.popFromStack('PLP');
+        // Strange things with BREAK & UNUSED
+        // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
+        this.setFlag(StatusFlags.BREAK, false);
+        this.setFlag(StatusFlags.UNUSED, false);
         return 0;
     }
 
@@ -1130,7 +1187,7 @@ class Cpu {
      */
     private instructionROL(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
         const data = addrModeMnemonic === 'IMP' ? this._a : this.read(addr);
-        const result = ((data << 1) | this.getFlag(StatusFlags.CARRY)) & Numbers.UINT8_CAST;
+        const result: Uint8 = ((data << 1) | this.getFlag(StatusFlags.CARRY)) & Numbers.UINT8_CAST;
         this.setFlag(StatusFlags.CARRY, Boolean(data & 0b10000000));
         this.setZeroAndNegativeByValue(result);
 
@@ -1149,7 +1206,7 @@ class Cpu {
      */
     private instructionROR(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
         const data = addrModeMnemonic === 'IMP' ? this._a : this.read(addr);
-        const result = ((data >>> 1) | (this.getFlag(StatusFlags.CARRY) << 7)) & Numbers.UINT8_CAST;
+        const result: Uint8 = ((data >>> 1) | (this.getFlag(StatusFlags.CARRY) << 7)) & Numbers.UINT8_CAST;
         this.setFlag(StatusFlags.CARRY, Boolean(data & 0b1));
         this.setZeroAndNegativeByValue(result);
 
@@ -1177,6 +1234,106 @@ class Cpu {
         } else {
             this.write(addr, result);
         }
+        return 0;
+    }
+
+    /**
+     * Illegal opcode: shortcut for LDA value then TAX
+     * X = A, Z = X === 0, N = RESULT < 0
+     */
+    private instructionIllegalLAX(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
+        // https://wiki.nesdev.com/w/index.php/Programming_with_unofficial_opcodes
+        // Notice that the immediate is missing;
+        // the opcode that would have been LAX is affected by line noise on the data bus.
+        // MOS 6502: even the bugs have bugs.
+        if (addrModeMnemonic === 'IMM') {
+            return 0;
+        }
+
+        this.instructionLDA(addr);
+        return this.instructionLDX(addr);
+    }
+
+    /**
+     * Illegal opcode: stores the bitwise AND of A and X
+     * M = A & X
+     */
+    private instructionIllegalSAX(addr: Uint16): AdditionalCycleFlag {
+        this.write(addr, this._a & this._x);
+        return 0;
+    }
+
+    /**
+     * Illegal opcode: equivalent to DEC value then CMP value
+     * M = M - 1, Z = A == M, C = A >= M, N = A - M
+     */
+    private instructionIllegalDCP(addr: Uint16): AdditionalCycleFlag {
+        // DEC part
+        const data = (this.read(addr) - 1) & Numbers.UINT8_CAST;
+        this.write(addr, data);
+
+        // CMP part
+        const result: Uint16 = (this._a - data) & Numbers.UINT16_CAST;
+        this.setZeroAndNegativeByValue(result & Numbers.UINT8_CAST);
+        this.setFlag(StatusFlags.CARRY, this._a >= data);
+        return 0;
+    }
+
+    /**
+     * Illegal opcode: INC the contents of a memory location and SBC result from A register
+     * M = M + 1, A = A - M
+     */
+    private instructionIllegalISC(addr: Uint16): AdditionalCycleFlag {
+        this.instructionINC(addr);
+        return this.instructionSBC(addr);
+    }
+
+    /**
+     * Illegal opcode: ASL value then ORA value
+     * M = M << 1, A = A | M, Z = A == 0, N = A < 0, C = DATA & 0b10000000
+     */
+    private instructionIllegalSLO(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
+        this.instructionASL(addrModeMnemonic, addr);
+        return this.instructionORA(addr);
+    }
+
+    private instructionIllegalRLA(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
+        this.instructionROL(addrModeMnemonic, addr);
+        return this.instructionAND(addr);
+    }
+
+    private instructionIllegalSRE(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
+        this.instructionLSR(addrModeMnemonic, addr);
+        return this.instructionEOR(addr);
+    }
+
+    private instructionIllegalRRA(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
+        this.instructionROR(addrModeMnemonic, addr);
+        return this.instructionADC(addr);
+    }
+
+    /**
+     * Illegal instruction: AND#i then LSR A
+     */
+    private instructionIllegalALR(addrModeMnemonic: AddrModeMnemonic, addr: Uint16): AdditionalCycleFlag {
+        // TOO test
+        this.instructionAND(addr);
+        return this.instructionLSR(addrModeMnemonic, addr);
+    }
+
+    /**
+     * Illegal instruction: AND#i then set CARRY same as NEGATIVE
+     */
+    private instructionIllegalANC(addr: Uint16): AdditionalCycleFlag {
+        // TODO test
+        const data = this.read(addr);
+        this._a = this._a & data;
+        this.setZeroAndNegativeByValue(this._a);
+        this.setFlag(StatusFlags.CARRY, Boolean(this._a & StatusFlags.NEGATIVE));
+        return 0;
+    }
+
+    private instructionIllegal(): AdditionalCycleFlag {
         return 0;
     }
 }

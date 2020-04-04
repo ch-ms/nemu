@@ -9,11 +9,9 @@ import {MirroringModes} from './mirroring-modes';
  */
 
 class Cartridge implements Device {
-    private readonly cartridgeData: CartridgeData;
     private readonly mapper: Mapper;
 
-    constructor(cartridgeData: CartridgeData) {
-        this.cartridgeData = cartridgeData;
+    constructor(private readonly cartridgeData: CartridgeData) {
         this.mapper = createMapper(cartridgeData.header);
     }
 
@@ -28,7 +26,9 @@ class Cartridge implements Device {
             return this.cartridgeData.chrRom[mappedAddr];
         } else if (mappedAddr >= 0x4020 && mappedAddr < 0x6000) {
             // TODO read from Expansion ROM
+            return 0;
         } else if (mappedAddr >= 0x6000 && mappedAddr < 0x8000) {
+            return 0;
             // TODO read from SRAM
         } else if (mappedAddr >= 0x8000 && mappedAddr < 0x10000) {
             return this.cartridgeData.prgRom[mappedAddr - 0x8000];

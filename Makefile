@@ -48,3 +48,7 @@ test:
 test-debug:
 	@make build-tests
 	@node --inspect-brk $$(npm bin)/jest build/tests/
+
+.PHONY: parse-nestest-log
+parse-nestest-log:
+	@node ./tools/parse-nestest-log/parse-nestest-log.js > ./tests/nestest.log.json

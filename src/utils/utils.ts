@@ -53,6 +53,7 @@ function* iteratePage(addrInPage: Uint16): IterableIterator<number> {
 export {
     cpuStatusToFormattedString,
     uint8ToHex,
+    uint16ToHex,
     iterateRam,
     iteratePage
 };

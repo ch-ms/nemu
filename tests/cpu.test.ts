@@ -276,7 +276,7 @@ describe('Cpu', () => {
         });
     });
 
-    describe('instructionLD*', () => {
+    describe('Load instructions (LDA, LDX, LDY)', () => {
         it('load X with ABS addr', () => {
             const cycles = 4;
             bus.write(0x0000, 0x7f);
@@ -310,20 +310,35 @@ describe('Cpu', () => {
         it.skip('load A with ZP0 addr', () => {
             // TODO: test 0
         });
-
-        it.skip('load X with ZPY addr', () => {
-        });
     });
 
-    describe('instructionST*', () => {
-        it.skip('Store A by ZP0', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 3;
+    describe('Store instructions (STA, STX, STY)', () => {
+        it('Store A by ABS', () => {
+            const cycles = 4;
+            // LDA #100
+            // STA $01ff
+            checkCpuStatus(
+                'A9 64 8D FF 01',
+                1,
+                {
+                    remainingCycles: cycles - 1
+                }
+            );
+            expect(bus.read(0x01ff)).toEqual(0x64);
         });
 
-        it.skip('Store X by ZPX', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        it('Store X by ABS', () => {
             const cycles = 4;
+            // LDX #100
+            // STX $01ff
+            checkCpuStatus(
+                'A2 64 8E FF 01',
+                1,
+                {
+                    remainingCycles: cycles - 1
+                }
+            );
+            expect(bus.read(0x01ff)).toEqual(0x64);
         });
 
         it('Store Y by ABS', () => {
@@ -337,16 +352,6 @@ describe('Cpu', () => {
             expect(cpu.remainingCycles).toEqual(cycles - 1);
 
             expect(bus.read(0x01ff)).toEqual(0x64);
-        });
-
-        it.skip('Store Y by INX', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 6;
-        });
-
-        it.skip('Store A by INY', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 6;
         });
     });
 
@@ -468,14 +473,13 @@ describe('Cpu', () => {
             checkCpuStatus('A9 7F 69 01', 1, {a: 128, status: 0b11100000});
         });
 
-        it.skip('Add 10 + 5 with CARRY with IMM.', () => {
-
+        it('Add 10 + 5 with CARRY with IMM.', () => {
+            // LDA #255
+            // ADC #1
+            // LDA #10
+            // ADC #5
+            checkCpuStatus('A9 FF 69 01 A9 0A 69 05', 3, {a: 16, status: 0b00100000});
         });
-
-        // TODO: ADC overflow tests
-
-        // TODO: SBC arithmetic tests
-        // TODO: test zero underflow
 
         it('Add two numbers with IMM', () => {
             const cycles = 2;
@@ -492,6 +496,9 @@ describe('Cpu', () => {
                 }
             );
         });
+
+        // TODO: SBC arithmetic tests
+        // TODO: test zero underflow
 
         it.skip('Sub two numbers with ZPO', () => {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1177,5 +1184,27 @@ describe('Cpu', () => {
                 }
             );
         });
+    });
+
+    describe('Logical instructions (ORA)', () => {
+        it('Perform ORA on accumulator with IMM', () => {
+            const cycles = 2;
+            // LDA #%00100100
+            // ORA #%10011001
+            checkCpuStatus(
+                'A9 24 09 99',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    a: 0b10111101,
+                    status: 0b10100000
+                }
+            );
+        });
+    });
+
+    // TODO
+    describe('Transfer instructions (TAX, TAY, TSX, TXA, TXS, TYA)', () => {
+
     });
 });

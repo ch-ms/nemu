@@ -2,6 +2,7 @@ import {CpuBus} from './cpu-bus';
 import {Cpu} from './cpu';
 import {Ppu, ScreenInterface} from './ppu';
 import {Cartridge} from './cartridge';
+import {ControllerInterface} from './controller';
 
 /*
  * Main NES class
@@ -13,6 +14,12 @@ const enum NesConstants {
     PPU_CLOCK_SPEED_MILLIHZ = NesConstants.MASTER_CLOCK_SPEED_MILLIHZ / 4
 }
 
+interface Options {
+    screenInterface?: ScreenInterface,
+    controller1Interface?: ControllerInterface,
+    controller2Interface?: ControllerInterface
+}
+
 class Nes {
     readonly cpu: Cpu;
     readonly ppu: Ppu;
@@ -21,15 +28,21 @@ class Nes {
     private cycle = 0;
     private previousAnimationFrame = -1;
 
-    constructor(cartridge: Cartridge, screenInterface?: ScreenInterface) {
-        this.ppu = new Ppu(cartridge, screenInterface);
-        this.bus = new CpuBus(cartridge, this.ppu);
+    private oamDmaInitialized = false;
+
+    constructor(cartridge: Cartridge, options: Options = {}) {
+        this.ppu = new Ppu(cartridge, options.screenInterface);
+        this.bus = new CpuBus(cartridge, this.ppu, options.controller1Interface, options.controller2Interface);
         this.cpu = new Cpu(this.bus);
         this.reset();
     }
 
     get isRunning(): boolean {
         return this.previousAnimationFrame !== -1;
+    }
+
+    getCycle(): number {
+        return this.cycle;
     }
 
     reset(): void {
@@ -69,7 +82,20 @@ class Nes {
         this.ppu.clock();
 
         if (this.cpuWillBeClocked) {
-            this.cpu.clock();
+            if (this.bus.isOamDmaTransfer) {
+                if (!this.oamDmaInitialized) {
+                    // We need to wait odd cycle to start oam dma
+                    this.oamDmaInitialized = this.cycle % 2 === 1;
+                } else if (this.cycle % 2 === 1) {
+                    // On odd clock we write
+                    this.ppu.writeOam(this.bus.getOamDmaOffset(), this.bus.getOamDmaByte());
+                    if (!this.bus.progressOamDmaTransfer()) {
+                        this.oamDmaInitialized = false;
+                    }
+                }
+            } else {
+                this.cpu.clock();
+            }
         }
 
         if (this.ppu.isNmiRequested) {

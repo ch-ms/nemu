@@ -10,7 +10,7 @@ class Mapper000 implements Mapper {
     }
 
     map(addr: Uint16): Uint16 {
-        if (addr >= 0xc000 && addr < 0x10000) {
+        if (this.cartridgeHeader.prgSize16K === 1 && addr >= 0xc000 && addr < 0x10000) {
             return addr - 0xc000 + 0x8000;
         }
 

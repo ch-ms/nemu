@@ -17,11 +17,23 @@ const enum PpuConstants {
     PPU_ADDR_REGISTER = 0x6,
     PPU_DATA_REGISTER = 0x7,
     CYCLES_PER_SCANLINE = 341,
+    VISIBLE_SCANLINE_END_CYCLE = 257,
     FRAME_SCANLINES = 261,
     PALETTE_START_ADDR = 0x3f00,
     NAMETABLE_START_ADDR = 0x2000,
     TILE_ATTRIB_START_ADDR = 0x23c0,
-    NAMETABLE_SIZE = Constants.KILOBYTE
+    NAMETABLE_SIZE = Constants.KILOBYTE,
+    // TODO Separate const for OAM
+    OAM_SIZE = 256,
+    OAM_ENTRY_SIZE = 4,
+    OAM_ENTRIES = PpuConstants.OAM_SIZE / OAM_ENTRY_SIZE,
+    OAM_ENTRY_Y = 0,
+    OAM_ENTRY_TILE_ID = 1,
+    OAM_ENTRY_ATTR = 2,
+    OAM_ENTRY_X = 3,
+    MAX_SPRITES_PER_SCANLINE = 8,
+    SPRITE_WIDTH = 8,
+    SPRITES_PALETTE_OFFSET = 4
 }
 
 const enum ControlRegister {
@@ -53,12 +65,20 @@ const enum StatusRegister {
     VERTICAL_BLANK = 1 << 7
 }
 
-const enum RenderingPipeline {
+const enum BackgroundPipeline {
     READ_NAMETABLE = 0,
     READ_ATTRIB = 2,
     READ_PATTERN_LSB = 4,
     READ_PATTERN_MSB = 6,
     INCREMENT_SCROLL_X = 7
+}
+
+const enum OamAttribute {
+    PALETTE = 0b11,
+    UNIMPLEMENTED = 0b111 << 2,
+    BACKGROUND_PRIORITY = 1 << 5,
+    FLIP_X = 1 << 6,
+    FLIP_Y = 1 << 7
 }
 
 interface ScreenInterface {
@@ -83,21 +103,28 @@ class Ppu implements Device {
     private controlRegister: Uint8 = 0x0;
 
     private palette = new Uint8Array(32);
+
+    // Background stuff
     private readonly nametable0 = new Uint8Array(PpuConstants.NAMETABLE_SIZE);
     private readonly nametable1 = new Uint8Array(PpuConstants.NAMETABLE_SIZE);
-
-    // PPU state
-    private dataBuffer = 0x0;
-    private isAddrHigherByte = true;
     private readonly vram = new LoopyRegister();
     private readonly tram = new LoopyRegister();
     private fineX = 0;
 
-    // Rendering pipeline
-    private nextTileId: Uint8 = 0;
-    private nextTileAttrib: Uint8 = 0;
-    private nextTileLsb: Uint8 = 0;
-    private nextTileMsb: Uint8 = 0;
+    // Foreground stuff
+    private readonly oam = new Uint8Array(PpuConstants.OAM_SIZE);
+    private oamAddr: Uint8 = 0;
+    private scanlineSpritesIndexes: number[] = [];
+
+    // PPU state
+    private dataBuffer = 0x0;
+    private isAddrHigherByte = true;
+
+    // Background rendering pipeline
+    private bgNextTileId: Uint8 = 0;
+    private bgNextTileAttrib: Uint8 = 0;
+    private bgNextTileLsb: Uint8 = 0;
+    private bgNextTileMsb: Uint8 = 0;
     private bgShifterPatternLsb: Uint16 = 0;
     private bgShifterPatternMsb: Uint16 = 0;
     private bgShifterAttribLo: Uint16 = 0;
@@ -141,10 +168,11 @@ class Ppu implements Device {
             }
 
             case PpuConstants.OAM_ADDR_REGISTER:
+                // Not readable
                 return 0;
 
             case PpuConstants.OAM_DATA_REGISTER:
-                return 0;
+                return this.oam[this.oamAddr];
 
             case PpuConstants.SCROLL_REGISTER:
                 return 0;
@@ -191,9 +219,11 @@ class Ppu implements Device {
                 break;
 
             case PpuConstants.OAM_ADDR_REGISTER:
+                this.oamAddr = data;
                 break;
 
             case PpuConstants.OAM_DATA_REGISTER:
+                this.oam[this.oamAddr] = data;
                 break;
 
             case PpuConstants.SCROLL_REGISTER:
@@ -262,6 +292,7 @@ class Ppu implements Device {
 
     // https://wiki.nesdev.com/w/index.php/PPU_frame_timing
     clock(): void {
+        // Background rendering
         if (this.scanline >= -1 && this.scanline < 240) {
             // TODO odd frame cycle skip
 
@@ -272,14 +303,14 @@ class Ppu implements Device {
                 // Rendering pipeline
                 // TODO mb we can read all in one call?
                 switch ((this.cycle - 1) % 8) {
-                    case RenderingPipeline.READ_NAMETABLE: {
+                    case BackgroundPipeline.READ_NAMETABLE: {
                         this.loadBgShifters();
 
-                        this.nextTileId = this.ppuRead(PpuConstants.NAMETABLE_START_ADDR + this.vram.tileId);
+                        this.bgNextTileId = this.ppuRead(PpuConstants.NAMETABLE_START_ADDR + this.vram.tileId);
                         break;
                     }
 
-                    case RenderingPipeline.READ_ATTRIB: {
+                    case BackgroundPipeline.READ_ATTRIB: {
                         let a = this.ppuRead(PpuConstants.TILE_ATTRIB_START_ADDR + this.vram.attribIndex);
 
                         if (this.vram.coarseY % 4 >= 2) {
@@ -289,33 +320,33 @@ class Ppu implements Device {
                             a = a >>> 2;
                         }
 
-                        this.nextTileAttrib = a & 0b11;
+                        this.bgNextTileAttrib = a & 0b11;
                         break;
                     }
 
-                    case RenderingPipeline.READ_PATTERN_LSB: {
+                    case BackgroundPipeline.READ_PATTERN_LSB: {
                         const addr: Uint16 = (
                             ((this.controlRegister & ControlRegister.PATTERN_BACKGROUND) << 8) +
                             // Tile id is multiplied by 16 since each tile is comprised from
                             // 16 bytes
-                            (this.nextTileId << 4) +
+                            (this.bgNextTileId << 4) +
                             (this.vram.fineY)
                         );
-                        this.nextTileLsb = this.ppuRead(addr);
+                        this.bgNextTileLsb = this.ppuRead(addr);
                         break;
                     }
 
-                    case RenderingPipeline.READ_PATTERN_MSB: {
+                    case BackgroundPipeline.READ_PATTERN_MSB: {
                         const addr: Uint16 = (
                             ((this.controlRegister & ControlRegister.PATTERN_BACKGROUND) << 8) +
-                            (this.nextTileId << 4) +
+                            (this.bgNextTileId << 4) +
                             (this.vram.fineY) + 8
                         );
-                        this.nextTileMsb = this.ppuRead(addr);
+                        this.bgNextTileMsb = this.ppuRead(addr);
                         break;
                     }
 
-                    case RenderingPipeline.INCREMENT_SCROLL_X: {
+                    case BackgroundPipeline.INCREMENT_SCROLL_X: {
                         this.incrementScrollX();
                         break;
                     }
@@ -334,7 +365,7 @@ class Ppu implements Device {
             }
 
             if (this.cycle === 338 || this.cycle === 340) {
-                this.nextTileId = this.ppuRead(PpuConstants.NAMETABLE_START_ADDR + this.vram.tileId);
+                this.bgNextTileId = this.ppuRead(PpuConstants.NAMETABLE_START_ADDR + this.vram.tileId);
             }
 
             if (this.scanline === -1 && this.cycle >= 280 && this.cycle < 305) {
@@ -344,8 +375,31 @@ class Ppu implements Device {
             }
         }
 
+        // Sprites evaluation
+        const spriteHeight = (this.controlRegister & ControlRegister.SPRITE_SIZE) ? 16 : 8;
+        if (this.scanline !== -1 && this.cycle === PpuConstants.VISIBLE_SCANLINE_END_CYCLE) {
+            this.scanlineSpritesIndexes = [];
+            // Eval which sprites are visible on the next scanline
+            for (let i = 0; i < PpuConstants.OAM_ENTRIES; i++) {
+                const index = i * PpuConstants.OAM_ENTRY_SIZE;
+                const yOffset = this.scanline - this.oam[index + PpuConstants.OAM_ENTRY_Y];
+                if (yOffset >= 0 && yOffset < spriteHeight) {
+                    if (this.scanlineSpritesIndexes.length === PpuConstants.MAX_SPRITES_PER_SCANLINE) {
+                        // Sprite overflow flag has different behaviour, we simplify this a litle bit
+                        this.statusRegister |= StatusRegister.SPRITE_OVERFLOW;
+                        break;
+                    }
+
+                    this.scanlineSpritesIndexes.push(index);
+                }
+            }
+        }
+
         if (this.scanline === -1 && this.cycle === 1) {
-            this.statusRegister &= ~StatusRegister.VERTICAL_BLANK;
+            // TODO merge all assignment into one
+            this.statusRegister = (this.statusRegister & ~StatusRegister.SPRITE_ZERO_HIT) & Numbers.UINT8_CAST;
+            this.statusRegister = (this.statusRegister & ~StatusRegister.VERTICAL_BLANK) & Numbers.UINT8_CAST;
+            this.statusRegister = (this.statusRegister & ~StatusRegister.SPRITE_OVERFLOW) & Numbers.UINT8_CAST;
         } else if (this.scanline === 241 && this.cycle === 1) {
             this.statusRegister |= StatusRegister.VERTICAL_BLANK;
             this.nmiFlag = Boolean(this.controlRegister & ControlRegister.ENABLE_NMI);
@@ -353,7 +407,6 @@ class Ppu implements Device {
 
         let bgPixel = 0;
         let bgPalette = 0;
-        // Composite pixel
         if (this.maskRegister & MaskRegister.RENDER_BACKGROUND) {
             // Offset to a proper pixel in buffer
             const offset = 0x8000 >>> this.fineX;
@@ -368,7 +421,95 @@ class Ppu implements Device {
             bgPalette = (paletteMsb << 1) | paletteLsb;
         }
 
-        const color = ppuPalette[this.ppuRead(PpuConstants.PALETTE_START_ADDR + (bgPalette * 4) + bgPixel) & 0x3F];
+        let fgPixel = 0;
+        let fgPalette = 0;
+        let bgPriority = 0;
+        let spriteZeroRendered = false;
+        if (this.maskRegister & MaskRegister.RENDER_SPRITES && this.cycle < PpuConstants.VISIBLE_SCANLINE_END_CYCLE) {
+            for (let i = 0; i < this.scanlineSpritesIndexes.length; i++) {
+                const index = this.scanlineSpritesIndexes[i];
+                const x = this.oam[index + PpuConstants.OAM_ENTRY_X];
+                const xOffset = this.cycle - x;
+                if (xOffset >= 0 && xOffset < PpuConstants.SPRITE_WIDTH) {
+                    const attr = this.oam[index + PpuConstants.OAM_ENTRY_ATTR];
+                    const flipY = attr & OamAttribute.FLIP_Y;
+                    // Since we collected sprites on the previous scanline we subtract one
+                    // TODO clarify this
+                    const yOffset = this.scanline - 1 - this.oam[index + PpuConstants.OAM_ENTRY_Y];
+                    const tileId = this.oam[index + PpuConstants.OAM_ENTRY_TILE_ID];
+
+                    const patternTableOffset = spriteHeight === 8 ?
+                        (this.controlRegister & ControlRegister.PATTERN_SPRITE) << 9 :
+                        (tileId & 0b1);
+                    const tilePart = spriteHeight === 8 ? 0 : (
+                        yOffset < 8 ? (flipY ? 1 : 0) : (flipY ? 0 : 1)
+                    );
+                    const tileOffset = spriteHeight === 8 ? tileId : tileId & 0b11111110;
+                    const addrLo = (
+                        patternTableOffset +
+                        ((tileOffset + tilePart) * 16) +
+                        (flipY ? 7 - yOffset: yOffset)
+                    );
+
+                    // TODO ppu read is slow, mb need to buffer this data
+                    const spriteLo = this.ppuRead(addrLo);
+                    const spriteHi = this.ppuRead(addrLo + 8);
+
+                    const flipX = attr & OamAttribute.FLIP_X;
+                    const bitOffset = 1 << (flipX ? xOffset : (7 - xOffset));
+                    const pixelLo = (spriteLo & bitOffset) && 1;
+                    const pixelHi = (spriteHi & bitOffset) && 1;
+                    const pixel = (pixelHi << 1) | pixelLo;
+
+                    //// If pixel is not transparent we can render it
+                    //// Since we have sprites arranged by priority we do not need to check other sprites
+                    if (pixel !== 0) {
+                        spriteZeroRendered = index === 0;
+                        fgPixel = pixel;
+                        fgPalette = (attr & OamAttribute.PALETTE) + PpuConstants.SPRITES_PALETTE_OFFSET;
+                        bgPriority = attr & OamAttribute.BACKGROUND_PRIORITY;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Resolve final pixel
+        const bgFgBothRendered = bgPixel !== 0 && fgPixel !== 0;
+        let pixel = 0;
+        let palette = 0;
+        if (bgPixel === 0 && fgPixel === 0) {
+            pixel = 0;
+            palette = 0;
+        } else if (
+            (bgPixel === 0 && fgPixel !== 0) ||
+            (bgFgBothRendered && !bgPriority)
+        ) {
+            pixel = fgPixel;
+            palette = fgPalette;
+        } else {
+            pixel = bgPixel;
+            palette = bgPalette;
+        }
+
+        if (
+            bgFgBothRendered &&
+            spriteZeroRendered &&
+            (this.maskRegister & MaskRegister.RENDER_BACKGROUND) &&
+            (this.maskRegister & MaskRegister.RENDER_SPRITES)
+        ) {
+            if ((this.maskRegister & MaskRegister.RENDER_BACKGROUND_LEFT) && (this.maskRegister & MaskRegister.RENDER_SPRITES)) {
+                if (this.cycle >= 1 && this.cycle < 258) {
+                    this.statusRegister |= StatusRegister.SPRITE_ZERO_HIT
+                }
+            } else {
+                if (this.cycle >= 9 && this.cycle < 258) {
+                    this.statusRegister |= StatusRegister.SPRITE_ZERO_HIT
+                }
+            }
+        }
+
+        const color = ppuPalette[this.ppuRead(PpuConstants.PALETTE_START_ADDR + (palette * 4) + pixel) & 0x3F];
         this.screenInterface.setPixel(this.cycle, this.scanline, color);
 
         // Advance cycles
@@ -382,6 +523,18 @@ class Ppu implements Device {
                 this.scanline = -1;
             }
         }
+    }
+
+    /**
+     * Write to oam directly
+     * Used in oam dma
+     */
+    writeOam(addr: Uint8, data: Uint8): void {
+        this.oam[addr] = data;
+    }
+
+    readOam(addr: Uint8): Uint8 {
+        return this.oam[addr];
     }
 
     private mirrorPaletteAddr(addr: Uint16): Uint16 {
@@ -445,12 +598,12 @@ class Ppu implements Device {
     }
 
     private loadBgShifters(): void {
-        this.bgShifterPatternLsb = (this.bgShifterPatternLsb & 0xff00) | this.nextTileLsb;
-        this.bgShifterPatternMsb = (this.bgShifterPatternMsb & 0xff00) | this.nextTileMsb;
+        this.bgShifterPatternLsb = (this.bgShifterPatternLsb & 0xff00) | this.bgNextTileLsb;
+        this.bgShifterPatternMsb = (this.bgShifterPatternMsb & 0xff00) | this.bgNextTileMsb;
 
         // We need to explode attrib value to 8 bit
-        this.bgShifterAttribLo = (this.bgShifterAttribLo & 0xff00) | (this.nextTileAttrib & 0b1 ? 0xff : 0);
-        this.bgShifterAttribHi = (this.bgShifterAttribHi & 0xff00) | (this.nextTileAttrib & 0b10 ? 0xff : 0);
+        this.bgShifterAttribLo = (this.bgShifterAttribLo & 0xff00) | (this.bgNextTileAttrib & 0b1 ? 0xff : 0);
+        this.bgShifterAttribHi = (this.bgShifterAttribHi & 0xff00) | (this.bgNextTileAttrib & 0b10 ? 0xff : 0);
     }
 
     private incrementScrollX(): void {
