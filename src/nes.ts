@@ -82,6 +82,7 @@ class Nes {
         this.ppu.clock();
 
         if (this.cpuWillBeClocked) {
+            // TODO Cpu & Ppu sync state here mb we can incapsulate it better
             if (this.bus.isOamDmaTransfer) {
                 if (!this.oamDmaInitialized) {
                     // We need to wait odd cycle to start oam dma

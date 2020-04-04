@@ -91,11 +91,11 @@ class CpuBus implements Bus {
         } else if (addr >= 0x2000 && addr < 0x4000) {
             return this.ppu.read(addr % 0x8);
         } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
-            const data = (this.controller1Shifter & (1 << 7)) >>> 7;
+            const data = (this.controller1Shifter & Constants.BIT_7) && 1;
             this.controller1Shifter = (this.controller1Shifter << 1) & Numbers.UINT8_CAST;
             return data;
         } else if (addr === CpuBusConstants.CONTROLLER_2_ADDR) {
-            const data = (this.controller2Shifter & (1 << 7)) >>> 7;
+            const data = (this.controller2Shifter & Constants.BIT_7) && 1;
             this.controller2Shifter = (this.controller2Shifter << 1) & Numbers.UINT8_CAST;
             return data;
         } else if (addr === CpuBusConstants.OAM_DMA_ADDR) {

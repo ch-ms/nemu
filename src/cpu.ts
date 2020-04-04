@@ -466,7 +466,8 @@ class Cpu {
         }
     }
 
-    // TODO make it better
+    // TODO this thing is for debug purposes (tests etc)
+    // We need better interface for this
     setFlagDebug(flag: StatusFlags, isSet: boolean): void {
         this.setFlag(flag, isSet);
     }
@@ -509,20 +510,18 @@ class Cpu {
         this._stackPointer = (this._stackPointer - 1) & Numbers.UINT8_CAST;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private popFromStack(vector: string): Uint8 {
-        //console.log('pop', vector);
+    private popFromStack(): Uint8 {
         this._stackPointer = (this._stackPointer + 1) & Numbers.UINT8_CAST;
         return this.read(this.stackAddr);
     }
 
     private pushProgramCounterToStack(): void {
-        this.pushToStack((this._programCounter >>> 8) & Numbers.UINT8_CAST);
+        this.pushToStack(this._programCounter >>> 8);
         this.pushToStack(this._programCounter & Numbers.UINT8_CAST);
     }
 
     private popProgramCounterFromStack(): Uint16 {
-        return this.popFromStack('pc') | (this.popFromStack('pc') << 8);
+        return this.popFromStack() | (this.popFromStack() << 8);
     }
 
     /**
@@ -971,7 +970,7 @@ class Cpu {
      * Return from interrupt
      */
     private instructionRTI(): AdditionalCycleFlag {
-        this._status = this.popFromStack('RTI');
+        this._status = this.popFromStack();
         // Strange things with BREAK & UNUSED
         // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
         this.setFlag(StatusFlags.BREAK, false);
@@ -1145,7 +1144,7 @@ class Cpu {
      * Z = A == 0, N = A < 0
      */
     private instructionPLA(): AdditionalCycleFlag {
-        this._a = this.popFromStack('PLA');
+        this._a = this.popFromStack();
         this.setZeroAndNegativeByValue(this._a);
         return 0;
     }
@@ -1154,7 +1153,7 @@ class Cpu {
      * Pulls value from the Stack to the Status
      */
     private instructionPLP(): AdditionalCycleFlag {
-        this._status = this.popFromStack('PLP');
+        this._status = this.popFromStack();
         // Strange things with BREAK & UNUSED
         // https://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
         this.setFlag(StatusFlags.BREAK, false);

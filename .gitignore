@@ -4,3 +4,4 @@ build/
 node_modules
 .DS_Store
 src/emulator-debugger/nestest.nes.json
+./tests/nestest.log.json

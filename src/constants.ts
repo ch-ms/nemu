@@ -1,5 +1,6 @@
 const enum Constants {
-    KILOBYTE = 1024
+    KILOBYTE = 1024,
+    BIT_7 = 0b10000000
 }
 
 export {Constants};
