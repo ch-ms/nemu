@@ -1,11 +1,15 @@
 import {Nes} from '../nes';
 import {Cpu} from '../cpu';
-import {ScreenInterface, Color} from '../ppu';
+import {ScreenInterface} from '../ppu';
 import {parseCartridge} from '../cartridge-parser';
 import {Cartridge} from '../cartridge';
 import {cpuStatusToFormattedString} from '../utils/utils';
 import {CpuProgramView} from './cpu-program-view';
+import {PaletteView} from './palette-view';
 import {MemoryView} from './memory-view';
+import {PatternView} from './pattern-view';
+import {NametableView} from './nametable-view';
+import {Color} from '../color';
 
 import * as nestestJson from '../../data/nestest.nes.json';
 const nestestRom = new Uint8Array(nestestJson).buffer;
@@ -32,6 +36,9 @@ class EmulatorDebuggerUI {
     private readonly cpuStatusView: CpuStatusView;
     private readonly cpuProgramView: CpuProgramView;
     private readonly memoryView: MemoryView;
+    private readonly paletteView: PaletteView;
+    private readonly patternView: PatternView;
+    private readonly nametableView: NametableView;
     private readonly screenInterface: ScreenInterface;
     private gameSession?: GameSession;
 
@@ -44,6 +51,10 @@ class EmulatorDebuggerUI {
 
         this.memoryView = new MemoryView(this.container.querySelector('.memory-explorer') as HTMLElement);
         this.memoryView.pageChanged = (): void => this.render();
+
+        this.paletteView = new PaletteView(this.container.querySelector('[data-view=palette]') as HTMLElement);
+        this.patternView = new PatternView(this.container.querySelector('[data-view=pattern]') as HTMLElement);
+        this.nametableView = new NametableView(this.container.querySelector('[data-view=nametable]') as HTMLElement);
 
         this.screenInterface = this.createScreenInterface();
 
@@ -58,15 +69,16 @@ class EmulatorDebuggerUI {
     private createScreenInterface(): ScreenInterface {
         const canvas = this.container.querySelector('#canvas') as HTMLCanvasElement;
         const ctx = canvas.getContext('2d');
+        const {width, height} = canvas;
 
         if (!ctx) {
             throw new Error('Error while receiving context from canvas');
         }
 
-        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        const imageData = ctx.createImageData(width, height);
         return {
             setPixel: (x: number, y: number, color: Color): void => {
-                const index = (y * canvas.width + x) * 4;
+                const index = (y * width + x) * 4;
                 imageData.data[index] = color[0];
                 imageData.data[index + 1] = color[1];
                 imageData.data[index + 2] = color[2];
@@ -146,6 +158,9 @@ class EmulatorDebuggerUI {
         this.cpuStatusView.render(this.gameSession.nes.cpu);
         this.cpuProgramView.render(this.gameSession.nes.cpu, this.gameSession.nes.bus);
         this.memoryView.render(this.gameSession.nes.bus);
+        this.paletteView.render(this.gameSession.nes.ppu);
+        this.patternView.render(this.gameSession.nes.ppu);
+        this.nametableView.render(this.gameSession.nes.ppu);
     }
 }
 

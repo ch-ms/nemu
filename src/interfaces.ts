@@ -1,4 +1,4 @@
-import {Uint8, Uint16} from './types';
+import {Uint8, Uint16} from './numbers';
 
 interface Readable {
     read(addr: Uint16): Uint8;

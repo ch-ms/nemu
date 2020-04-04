@@ -1,0 +1,13 @@
+.pattern-view canvas {
+    width: 256px;
+    height: 256px;
+}
+
+.screen canvas {
+    width: 682px;
+    height: 512px;
+}
+
+.nametable-view {
+    padding-top: 5px;
+}

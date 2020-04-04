@@ -72,6 +72,11 @@ class Nes {
             this.cpu.clock();
         }
 
+        if (this.ppu.isNmiRequested) {
+            this.cpu.nmi();
+            this.ppu.clearNmiFlag();
+        }
+
         this.cycle++;
     }
 

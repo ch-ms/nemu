@@ -1,4 +1,4 @@
-import {Uint8, Uint16} from './types';
+import {Uint8, Uint16} from './numbers';
 import {Bus} from './interfaces';
 
 class DebuggerBus implements Bus {

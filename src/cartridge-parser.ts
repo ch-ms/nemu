@@ -1,8 +1,11 @@
+import {MirroringModes} from './mirroring-modes';
+
 interface CartridgeHeader {
     prgSize16K: number;
     chrSize8K: number;
     mapper: number;
     haveTrainer: boolean;
+    mirroring: number;
 }
 
 interface CartridgeData {
@@ -48,11 +51,15 @@ function parseHeader(data: Uint8Array): CartridgeHeader {
     const hiMapper = flags7 & 0b11110000;
     const mapper = hiMapper | (loMapper >> 4);
 
+    const mirroring = (flags6 & 0x1) === 0 ?
+        MirroringModes.HORIZONTAL : MirroringModes.VERTICAL;
+
     return {
         prgSize16K,
         chrSize8K,
         mapper,
-        haveTrainer
+        haveTrainer,
+        mirroring
     };
 }
 

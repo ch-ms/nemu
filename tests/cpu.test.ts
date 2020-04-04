@@ -1,5 +1,5 @@
-import {CpuDebugger} from '../src/cpu-debugger';
-import {StatusFlags} from '../src/cpu';
+import {CpuDebugger, CpuDebuggerConstants} from '../src/cpu-debugger';
+import {StatusFlags, CpuConstants} from '../src/cpu';
 
 interface CpuStatus {
     a?: number;
@@ -8,12 +8,14 @@ interface CpuStatus {
     status?: number;
     remainingCycles?: number;
     programCounter?: number;
+    stackPointer?: number;
 }
 
 describe('Cpu', () => {
     let cpuDebugger = new CpuDebugger();
     let {cpu, bus} = cpuDebugger;
     let initialProgramAddress = cpu.programCounter;
+    const STACK_ADDR = CpuConstants.BASE_STACK_ADDR + CpuConstants.BASE_STACK_OFFSET;
 
     function checkCpuStatus(program: string, skipOperations: number, cpuStatus: CpuStatus): void {
         cpuDebugger.loadProgram(program);
@@ -44,6 +46,10 @@ describe('Cpu', () => {
         if (typeof cpuStatus.status === 'number') {
             expect(cpu.status).toEqual(cpuStatus.status);
         }
+
+        if (typeof cpuStatus.stackPointer === 'number') {
+            expect(cpu.stackPointer).toEqual(cpuStatus.stackPointer);
+        }
     }
 
     beforeEach(() => {
@@ -66,6 +72,207 @@ describe('Cpu', () => {
             expect(cpu.stackPointer).toEqual(0xfd);
             expect(cpu.programCounter).toEqual(0x1234);
             expect(cpu.remainingCycles).toEqual(8);
+        });
+    });
+
+    describe('nmi', () => {
+        it('process non maskable interrupt', () => {
+            cpu.write(CpuConstants.BASE_NMI_ADDR, 0xcc);
+            cpu.write(CpuConstants.BASE_NMI_ADDR + 1, 0xcc);
+            // LDA #255
+            cpuDebugger.loadProgram('A9 FF');
+            cpuDebugger.executeNInstructions(1);
+            const pc = cpu.programCounter;
+            const status = cpu.status;
+            cpu.nmi();
+            expect(cpu.read(cpu.stackAddr + 3)).toEqual((pc >>> 8) & 0xff);
+            expect(cpu.read(cpu.stackAddr + 2)).toEqual(pc & 0xff);
+            expect(cpu.read(cpu.stackAddr + 1)).toEqual(status | 0b00100100);
+            expect(cpu.programCounter).toEqual(0xcccc);
+            expect(cpu.remainingCycles).toEqual(8);
+        });
+    });
+
+    describe('Addr mode ABX, ABY', () => {
+        it('Add two numbers with ABX', () => {
+            const cycles = 4;
+            // LDA #2
+            // STA 0001
+            // LDX #1
+            // ADC 0000,X
+            checkCpuStatus(
+                'A9 02 8D 01 00 A2 01 7D 00 00',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    a: 4,
+                    status: 0b00100000
+                }
+            );
+        });
+
+        it('Add two numbers with ABY with address overflow and page crossing', () => {
+            const cycles = 5;
+            // LDA #2
+            // STA 0000
+            // LDY #1
+            // ADC $FFFF,Y
+            checkCpuStatus(
+                'A9 02 8D 00 00 A0 01 79 FF FF',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    a: 4,
+                    status: 0b00100000
+                }
+            );
+        });
+    });
+
+    describe('Addr mode ZP0, ZPX, ZPY', () => {
+        it('Stores A by ZP0', () => {
+            const cycles = 3;
+            // LDA #3
+            // STA *07
+            checkCpuStatus(
+                'A9 03 85 07',
+                1,
+                {
+                    remainingCycles: cycles - 1
+                }
+            );
+            expect(cpu.read(0x7)).toEqual(3);
+        });
+
+        it('Stores Y by ZPX', () => {
+            const cycles = 4;
+            // LDX #1
+            // LDY #3
+            // STY *07,X
+            checkCpuStatus(
+                'A2 01 A0 03 94 07',
+                2,
+                {
+                    remainingCycles: cycles - 1
+                }
+            );
+            expect(cpu.read(0x8)).toEqual(3);
+        });
+
+        it('Stores X by ZPY with address overflow', () => {
+            const cycles = 4;
+            // LDX #5
+            // LDY #254
+            // STX *07,Y
+            checkCpuStatus(
+                'A2 05 A0 FE 96 07',
+                2,
+                {
+                    remainingCycles: cycles - 1
+                }
+            );
+            expect(cpu.read(0x5)).toEqual(5);
+        });
+    });
+
+    describe('addrModeIZY', () => {
+        it('Add two numbers with IZY', () => {
+            const cycles = 5;
+            // LDA #7
+            // STA $ff
+            // LDA #$fe
+            // STA 40
+            // LDA #7
+            // LDY #1
+            // ADC (40),Y
+            checkCpuStatus(
+                'A9 07 8D FF 00 A9 FE 8D 28 00 A9 07 A0 01 71 28',
+                6,
+                {
+                    remainingCycles: cycles - 1,
+                    a: 14
+                }
+            );
+        });
+
+        it('Subtract two numbers with IZY with page crossing', () => {
+            const cycles = 6;
+            // LDA #5
+            // STA $101
+            // LDA #$fe
+            // STA 40
+            // LDA #7
+            // LDY #3
+            // SBC (40),Y
+            checkCpuStatus(
+                'A9 05 8D 01 01 A9 FE 8D 28 00 A9 07 A0 03 F1 28',
+                6,
+                {
+                    remainingCycles: cycles - 1,
+                    // 1 because of carry borrow
+                    a: 1
+                }
+            );
+
+        });
+    });
+
+    describe('addrModeIZX', () => {
+        it('Logical OR with IZX', () => {
+            const cycles = 6;
+            // LDA #$AA
+            // STA $00A1
+            // LDA #$BB
+            // STA $00A0
+            // LDX #1
+            // LDA #%10001000
+            // STA $AABB
+            // LDA #%00100010
+            // ORA ($9f,X)
+            checkCpuStatus(
+                'A9 AA 8D A1 00 A9 BB 8D A0 00 A2 01 A9 88 8D BB AA A9 22 01 9F',
+                8,
+                {
+                    remainingCycles: cycles - 1,
+                    a: 0b10101010
+                }
+            );
+        });
+    });
+
+    describe('addrModeIND', () => {
+        it('Jump with IND', () => {
+            const cycles = 5;
+            // LDX #$AA
+            // STX $A1
+            // LDX #$BB
+            // STX $A0
+            // JMP ($00A0)
+            checkCpuStatus(
+                'A2 AA 8E A1 00 A2 BB 8E A0 00 6C A0 00',
+                4,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: 0xaabb
+                }
+            );
+        });
+
+        it('Jump with IND page overflow', () => {
+            const cycles = 5;
+            // LDX #$AA
+            // STX $100
+            // LDX #$BB
+            // STX $FF
+            // JMP ($00FF)
+            checkCpuStatus(
+                'A2 AA 8E 00 01 A2 BB 8E FF 00 6C FF 00',
+                4,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: 0x00bb
+                }
+            );
         });
     });
 
@@ -106,10 +313,6 @@ describe('Cpu', () => {
 
         it.skip('load X with ZPY addr', () => {
         });
-
-        it.skip('load X with ABY addr', () => {
-            // TODO: test page crossed
-        });
     });
 
     describe('instructionST*', () => {
@@ -134,16 +337,6 @@ describe('Cpu', () => {
             expect(cpu.remainingCycles).toEqual(cycles - 1);
 
             expect(bus.read(0x01ff)).toEqual(0x64);
-        });
-
-        it.skip('Store A by ABX', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 5;
-        });
-
-        it.skip('Store X by ABY', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 5;
         });
 
         it.skip('Store Y by INX', () => {
@@ -326,17 +519,7 @@ describe('Cpu', () => {
                     a: 4,
                     status: 0b00100000
                 }
-            )
-        });
-
-        it.skip('Add two numbers with ABX', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 4;
-        });
-
-        it.skip('Sub two numbers with ABX with page crossed', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cycles = 5;
+            );
         });
 
         it.skip('Add two numbers with INX', () => {
@@ -520,6 +703,477 @@ describe('Cpu', () => {
                 {
                     remainingCycles: cycles - 1,
                     programCounter: initialProgramAddress + 3
+                }
+            );
+        });
+    });
+
+    describe('increment/decrement instructions (dex, dey, dec, inx, iny, inc)', () => {
+        it('DEX Decrement X register', () => {
+            const cycles = 2;
+            // LDX #2
+            // DEX
+            checkCpuStatus(
+                'A2 02 CA',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    x: 1,
+                    status: 0b00100000
+                }
+            );
+        });
+
+        it('DEX Decrement X register and wrap it around', () => {
+            const cycles = 2;
+            // LDX #0
+            // DEX
+            checkCpuStatus(
+                'A2 00 CA',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    x: 0xff,
+                    status: 0b10100000
+                }
+            );
+        });
+
+        it('INX Increment X register', () => {
+            const cycles = 2;
+            // LDX #2
+            // INX
+            checkCpuStatus(
+                'A2 02 E8',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    x: 3,
+                    status: 0b00100000
+                }
+            );
+        });
+
+        it('INX Increment X register and wrap it around', () => {
+            const cycles = 2;
+            // LDX #255
+            // INX
+            checkCpuStatus(
+                'A2 FF E8',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    x: 0,
+                    status: 0b00100010
+                }
+            );
+        });
+
+        it('DEY Decrement Y register', () => {
+            const cycles = 2;
+            // LDY #2
+            // DEY
+            checkCpuStatus(
+                'A0 02 88',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    y: 1,
+                    status: 0b00100000
+                }
+            );
+        });
+
+        it('DEY Decrement Y register and wrap it around', () => {
+            const cycles = 2;
+            // LDY #0
+            // DEY
+            checkCpuStatus(
+                'A0 00 88',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    y: 0xff,
+                    status: 0b10100000
+                }
+            );
+        });
+
+        it('INY Increment Y register', () => {
+            const cycles = 2;
+            // LDY #2
+            // INY
+            checkCpuStatus(
+                'A0 02 C8',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    y: 3,
+                    status: 0b00100000
+                }
+            );
+        });
+
+        it('INY Increment Y register and wrap it around', () => {
+            const cycles = 2;
+            // LDY #255
+            // INY
+            checkCpuStatus(
+                'A0 FF C8',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    y: 0,
+                    status: 0b00100010
+                }
+            );
+        });
+
+        it('DEC Decrement memory value by ABS', () => {
+            const cycles = 6;
+            // LDA #2
+            // STA 0000
+            // DEC 0000
+            checkCpuStatus(
+                'A9 02 8D 00 00 CE 00 00',
+                2,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100000
+                }
+            );
+            expect(cpu.read(0x0)).toEqual(1);
+        });
+
+        it('DEC Decrement memory value and wrap it around by ABS', () => {
+            const cycles = 6;
+            // LDA #2
+            // STA 0000
+            // DEC 0000
+            checkCpuStatus(
+                'A9 00 8D 00 00 CE 00 00',
+                2,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b10100000
+                }
+            );
+            expect(cpu.read(0x0)).toEqual(255);
+        });
+
+        it('INC Increment memory value by ABS', () => {
+            const cycles = 6;
+            // LDA #2
+            // STA 0000
+            // INC 0000
+            checkCpuStatus(
+                'A9 02 8D 00 00 EE 00 00',
+                2,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100000
+                }
+            );
+            expect(cpu.read(0x0)).toEqual(3);
+        });
+
+        it('INC Increment memory value and wrap it around by ABS', () => {
+            const cycles = 6;
+            // LDA #255
+            // STA 0000
+            // INC 0000
+            checkCpuStatus(
+                'A9 FF 8D 00 00 EE 00 00',
+                2,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100010
+                }
+            );
+            expect(cpu.read(0x0)).toEqual(0);
+        });
+    });
+
+    describe('Jump instructions (jsr, jmp, brk, rts, rti)', () => {
+        it('instructionJSR', () => {
+            const cycles = 6;
+            // LDA #2
+            // JSR 0
+            checkCpuStatus(
+                'A9 02 20 03 00',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: 3,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET - 2
+                }
+            );
+            const programCounterShouldBe = CpuDebuggerConstants.BASE_PRG_ADDR + 4;
+            expect(cpu.read(STACK_ADDR)).toEqual((programCounterShouldBe >> 8) & 0xff);
+            expect(cpu.read(STACK_ADDR - 1)).toEqual(programCounterShouldBe & 0xff);
+        });
+
+        it('instructionRTS', () => {
+            const cycles = 6;
+            // JSR CpuDebuggerConstants.BASE_PRG_ADDR + 3
+            // NOP
+            // RTS
+            checkCpuStatus(
+                '20 03 80 EA 60',
+                2,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: CpuDebuggerConstants.BASE_PRG_ADDR + 3,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET
+                }
+            );
+        });
+
+        it('instructionBRK', () => {
+            const cycles = 7;
+            cpu.write(CpuConstants.BASE_INTERRUPT_ADDR, 0xcc);
+            cpu.write(CpuConstants.BASE_INTERRUPT_ADDR + 1, 0xbb);
+            // BRK
+            checkCpuStatus(
+                '00',
+                0,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: 0xbbcc,
+                    status: 0b00100100
+                }
+            );
+            const pc = CpuDebuggerConstants.BASE_PRG_ADDR + 3; // one for BRK instruction, 1 from IMM mode, and 1 for brk skip
+            expect(cpu.read(cpu.stackAddr + 3)).toEqual((pc >>> 8) & 0xff);
+            expect(cpu.read(cpu.stackAddr + 2)).toEqual(pc & 0xff);
+            expect(cpu.read(cpu.stackAddr + 1)).toEqual(0b00110100);
+        });
+
+        it('instructionRTI', () => {
+            const cycles = 6;
+            cpu.write(CpuConstants.BASE_INTERRUPT_ADDR, 0xcc);
+            cpu.write(CpuConstants.BASE_INTERRUPT_ADDR + 1, 0xbb);
+            cpu.write(0xbbcc, 0x40);
+            // BRK
+            // RTI at 0xbbcc
+            checkCpuStatus(
+                '00',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: CpuDebuggerConstants.BASE_PRG_ADDR + 3,
+                    status: 0b00100100,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET
+                }
+            );
+        });
+
+        it('instructionJMP', () => {
+            const cycles = 3;
+            // JMP $bbcc
+            checkCpuStatus(
+                '4C CC BB',
+                0,
+                {
+                    remainingCycles: cycles - 1,
+                    programCounter: 0xbbcc
+                }
+            );
+        });
+    });
+
+    describe('Stack instructions (PHA, PHP, PLA, PLP)', () => {
+        it('Push A to the stack with PHA', () => {
+            const cycles = 3;
+            // LDA #10
+            // PHA
+            checkCpuStatus(
+                'A9 0A 48',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET - 1
+                }
+            );
+            expect(cpu.read(cpu.stackAddr + 1)).toEqual(10);
+
+        });
+
+        it('Push Status to the stack with PHP', () => {
+            const cycles = 3;
+            // LDA #255
+            // PHP
+            checkCpuStatus(
+                'A9 FF 08',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET - 1
+                }
+            );
+            expect(cpu.read(cpu.stackAddr + 1)).toEqual(0b10110000);
+        });
+
+        it('Pulls A from the Stack with PLA', () => {
+            const cycles = 4;
+            // LDA #255
+            // PHA
+            // LDA #0
+            // PLA
+            checkCpuStatus(
+                'A9 FF 48 A9 00 68',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET,
+                    status: 0b10100000,
+                    a: 255
+                }
+            );
+        });
+
+        it('Pulls Status from the Stack with PLP', () => {
+            const cycles = 4;
+            // LDA #255
+            // PHP
+            // LDA #0
+            // PLP
+            checkCpuStatus(
+                'A9 FF 08 A9 00 28',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    stackPointer: CpuConstants.BASE_STACK_OFFSET,
+                    status: 0b10110000
+                }
+            );
+        });
+    });
+
+    describe('Logical instructions (ALS, LSR, ROL, ROR)', () => {
+        it('Perform LSR on memory with carry', () => {
+            const cycles = 6;
+            // LDA #255
+            // STA $0020
+            // LSR $0020
+            checkCpuStatus(
+                'A9 FF 8D 20 00 4E 20 00',
+                2,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100001
+                }
+            );
+            expect(cpu.read(0x20)).toEqual(255 >>> 1);
+        });
+
+        it('Perform LSR on accumulator', () => {
+            const cycles = 2;
+            // LDA #1
+            // LSR A
+            checkCpuStatus(
+                'A9 01 4A',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100011,
+                    a: 0
+                }
+            );
+        });
+
+        it('Perform ROL on memory with carry', () => {
+            const cycles = 6;
+            // LDA #3
+            // LSR A
+            // STA $0020
+            // ROL $0020
+            checkCpuStatus(
+                'A9 03 4A 8D 20 00 2E 20 00',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100000
+                }
+            );
+            expect(cpu.read(0x20)).toEqual(3);
+        });
+
+        it('Perform ROL on accumulator with overlow', () => {
+            const cycles = 2;
+            // LDA #255
+            // ROL A
+            checkCpuStatus(
+                'A9 FF 2A',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b10100001,
+                    a: (255 << 1) & 0xff
+                }
+            );
+        });
+
+        it('Perform ROR on memory with carry', () => {
+            const cycles = 6;
+            // LDA #3
+            // LSR A
+            // STA $0020
+            // ROR $0020
+            checkCpuStatus(
+                'A9 03 4A 8D 20 00 6E 20 00',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b10100001
+                }
+            );
+            expect(cpu.read(0x20)).toEqual(0b10000000);
+        });
+
+        it('Perform ROR on accumulator', () => {
+            const cycles = 2;
+            // LDA #255
+            // ROR A
+            checkCpuStatus(
+                'A9 FF 6A',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100001,
+                    a: 255 >>> 1
+                }
+            );
+        });
+
+        it('Perform ALS on memory with carry', () => {
+            const cycles = 6;
+            // LDA #3
+            // LSR A
+            // STA $0020
+            // ASL $0020
+            checkCpuStatus(
+                'A9 03 4A 8D 20 00 0E 20 00',
+                3,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b00100000
+                }
+            );
+            expect(cpu.read(0x20)).toEqual(2);
+        });
+
+        it('Perform ASL on accumulator with overflow', () => {
+            const cycles = 2;
+            // LDA #255
+            // ASL A
+            checkCpuStatus(
+                'A9 FF 0A',
+                1,
+                {
+                    remainingCycles: cycles - 1,
+                    status: 0b10100001,
+                    a: (255 << 1) & 0xff
                 }
             );
         });

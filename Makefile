@@ -43,3 +43,8 @@ build-tests:
 test:
 	@make build-tests
 	@$$(npm bin)/jest build/tests/
+
+.PHONY: test-debug
+test-debug:
+	@make build-tests
+	@node --inspect-brk $$(npm bin)/jest build/tests/

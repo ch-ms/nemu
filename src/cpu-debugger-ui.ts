@@ -1,4 +1,4 @@
-import {Uint16} from './types';
+import {Uint16} from './numbers';
 import {CpuDebugger} from './cpu-debugger';
 import {
     cpuStatusToFormattedString,

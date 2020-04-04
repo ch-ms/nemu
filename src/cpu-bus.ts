@@ -1,4 +1,4 @@
-import {Uint16, Uint8} from './types';
+import {Uint16, Uint8} from './numbers';
 import {Bus} from './interfaces';
 import {Ppu} from './ppu';
 import {Constants} from './constants';
@@ -38,6 +38,7 @@ class CpuBus implements Bus {
             return this.ppu.read(addr % 0x8);
         } else if (addr >= 0x4000 && addr < 0x4020) {
             // TODO map to APU
+            return 0;
         } else if (addr >= 0x4020 && addr < 0x10000) {
             return this.cartridge.read(addr);
         }

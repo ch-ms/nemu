@@ -1,4 +1,4 @@
-import {Uint16} from './types';
+import {Uint16} from './numbers';
 import {Mapper} from './mapper';
 import {CartridgeHeader} from './cartridge-parser';
 

@@ -1,5 +1,5 @@
 import {Bus} from '../interfaces';
-import {Uint16} from '../types';
+import {Uint16} from '../numbers';
 import {uint8ToHex, iteratePage} from '../utils/utils';
 
 class MemoryView {

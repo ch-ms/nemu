@@ -1,4 +1,4 @@
-import {Color} from './ppu';
+import {Color} from './color';
 
 // https://wiki.nesdev.com/w/index.php/PPU_palettes
 const ppuPalette: Record<string, Color> = {

@@ -1,4 +1,4 @@
-import {Uint8, Uint16} from '../types';
+import {Uint8, Uint16} from '../numbers';
 import {Cpu} from '../cpu';
 
 function stuffWithZeros(str: string, size: number): string {

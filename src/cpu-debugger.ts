@@ -49,5 +49,4 @@ class CpuDebugger {
     }
 }
 
-export {CpuDebugger};
-
+export {CpuDebugger, CpuDebuggerConstants};
