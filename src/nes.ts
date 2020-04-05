@@ -1,7 +1,7 @@
-import {CpuBus} from './cpu-bus';
-import {Cpu} from './cpu';
-import {Ppu, ScreenInterface} from './ppu';
-import {Cartridge} from './cartridge';
+import {CpuBus, CpuBusState} from './cpu-bus';
+import {Cpu, CpuState} from './cpu';
+import {Ppu, ScreenInterface, PpuState} from './ppu';
+import {Cartridge, CartridgeState} from './cartridge';
 import {ControllerInterface} from './controller';
 
 /*
@@ -15,9 +15,17 @@ const enum NesConstants {
 }
 
 interface Options {
-    screenInterface?: ScreenInterface,
-    controller1Interface?: ControllerInterface,
-    controller2Interface?: ControllerInterface
+    screenInterface?: ScreenInterface;
+    controller1Interface?: ControllerInterface;
+    controller2Interface?: ControllerInterface;
+    state?: NesState;
+}
+
+export interface NesState {
+    cpu: CpuState;
+    ppu: PpuState;
+    cpuBus: CpuBusState;
+    cartridge: CartridgeState;
 }
 
 class Nes {
@@ -30,11 +38,27 @@ class Nes {
 
     private oamDmaInitialized = false;
 
-    constructor(cartridge: Cartridge, options: Options = {}) {
-        this.ppu = new Ppu(cartridge, options.screenInterface);
-        this.bus = new CpuBus(cartridge, this.ppu, options.controller1Interface, options.controller2Interface);
-        this.cpu = new Cpu(this.bus);
-        this.reset();
+    constructor(
+        private readonly cartridge: Cartridge,
+        options: Options = {}
+    ) {
+        this.ppu = new Ppu(
+            this.cartridge,
+            options.screenInterface,
+            options.state ? options.state.ppu : undefined
+        );
+        this.bus = new CpuBus(
+            this.cartridge,
+            this.ppu,
+            options.controller1Interface,
+            options.controller2Interface,
+            options.state ? options.state.cpuBus : undefined
+        );
+        this.cpu = new Cpu(this.bus, options.state ? options.state.cpu : undefined);
+
+        if (!options.state) {
+            this.reset();
+        }
     }
 
     get isRunning(): boolean {
@@ -75,6 +99,15 @@ class Nes {
 
     pause(): void {
         this.previousAnimationFrame = -1;
+    }
+
+    serialize(): NesState {
+        return {
+            cpu: this.cpu.serialize(),
+            ppu: this.ppu.serialize(),
+            cpuBus: this.bus.serialize(),
+            cartridge: this.cartridge.serialize()
+        };
     }
 
     private clock(): void {
@@ -128,6 +161,11 @@ class Nes {
 
     private get cpuWillBeClocked(): boolean {
         return this.cycle % NesConstants.CPU_CLOCK_PERIOD === 0;
+    }
+
+    static fromSerializedState(state: NesState, options: Options = {}): Nes {
+        const cartridge = Cartridge.fromSerializedState(state.cartridge);
+        return new Nes(cartridge, options ? {...options, state} : {state});
     }
 }
 

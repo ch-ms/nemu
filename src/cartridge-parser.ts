@@ -8,11 +8,14 @@ interface CartridgeHeader {
     mirroring: number;
 }
 
-interface CartridgeData {
+interface BaseCartridgeData<T> {
     header: CartridgeHeader;
-    prgRom: Uint8Array;
-    chrRom: Uint8Array;
+    prgRom: T;
+    chrRom: T;
 }
+
+type CartridgeData = BaseCartridgeData<Uint8Array>;
+export type SerializedCartridgeData = BaseCartridgeData<number[]>;
 
 const enum CartridgeConstants {
     HEADER_OFFSET = 16,
@@ -83,8 +86,26 @@ function parseCartridge(buffer: ArrayBuffer): CartridgeData {
     return {header, prgRom, chrRom};
 }
 
+function serializeCartridgeData(data: CartridgeData): SerializedCartridgeData {
+    return {
+        header: {...data.header},
+        prgRom: Array.from(data.prgRom.values()),
+        chrRom: Array.from(data.chrRom.values())
+    };
+}
+
+function deserializeCartridgeData(serialized: SerializedCartridgeData): CartridgeData {
+    return {
+        header: {...serialized.header},
+        prgRom: Uint8Array.from(serialized.prgRom),
+        chrRom: Uint8Array.from(serialized.chrRom)
+    }
+}
+
 export {
     CartridgeData,
     CartridgeHeader,
-    parseCartridge
+    parseCartridge,
+    serializeCartridgeData,
+    deserializeCartridgeData
 };

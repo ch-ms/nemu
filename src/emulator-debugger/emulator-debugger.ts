@@ -1,4 +1,4 @@
-import {Nes} from '../nes';
+import {Nes, NesState} from '../nes';
 import {Cpu} from '../cpu';
 import {ScreenInterface} from '../ppu';
 import {ControllerButtons, ControllerInterface} from '../controller';
@@ -28,11 +28,38 @@ const keyCodes = new Map<number, number>([
     [39, ControllerButtons.RIGHT]
 ]);
 
+const NES_SAVE_STATE_STORAGE_KEY = 'nesSaveState';
 
 class GameSession {
-    readonly nes: Nes;
-    constructor(cartridge: Cartridge, screenInterface: ScreenInterface, controllerInterface: ControllerInterface) {
-        this.nes = new Nes(cartridge, {screenInterface, controller1Interface: controllerInterface});
+    constructor(readonly nes: Nes) {
+    }
+
+    save(): void {
+        const state = this.nes.serialize();
+        console.log('save', state);
+        window.localStorage.setItem(NES_SAVE_STATE_STORAGE_KEY, JSON.stringify(state));
+    }
+
+    destroy(): void {
+        this.nes.pause();
+    }
+
+    static fromSerializedState(
+        state: NesState,
+        screenInterface: ScreenInterface,
+        controllerInterface: ControllerInterface
+    ): GameSession {
+        return new GameSession(
+            Nes.fromSerializedState(state, {screenInterface, controller1Interface: controllerInterface})
+        );
+    }
+
+    static fromCartridge(
+        cartridge: Cartridge,
+        screenInterface: ScreenInterface,
+        controllerInterface: ControllerInterface
+    ): GameSession {
+        return new GameSession(new Nes(cartridge, {screenInterface, controller1Interface: controllerInterface}));
     }
 }
 
@@ -76,6 +103,8 @@ class EmulatorDebuggerUI {
         this.container.querySelector('button[name=reset]')!.addEventListener('click', this.onResetClick);
         this.container.querySelector('button[name=run]')!.addEventListener('click', this.onRunClick);
         this.container.querySelector('button[name=pause]')!.addEventListener('click', this.onPauseClick);
+        this.container.querySelector('button[name=save-state]')!.addEventListener('click', this.onSaveStateClick.bind(this));
+        this.container.querySelector('button[name=load-state]')!.addEventListener('click', this.onLoadStateClick.bind(this));
 
         this.createGameSession(nestestRom);
     }
@@ -187,9 +216,35 @@ class EmulatorDebuggerUI {
         fileReader.readAsArrayBuffer(file);
     }
 
+    private onSaveStateClick(): void {
+        if (!this.gameSession) {
+            throw new Error(`There is no game session`);
+        }
+
+        this.gameSession.save();
+    }
+
+    private onLoadStateClick(): void {
+        const stateString = window.localStorage.getItem(NES_SAVE_STATE_STORAGE_KEY);
+        if (!stateString) {
+            throw new Error(`There is no save state in the local storage`);
+        }
+
+        const state = JSON.parse(stateString);
+
+        if (this.gameSession) {
+            this.gameSession.destroy();
+        }
+
+        console.log('load', state);
+        this.gameSession = GameSession.fromSerializedState(state, this.createScreenInterface(), this.createControllerInterface());
+        this.gameSession.nes.run();
+        this.render();
+    }
+
     private createGameSession(buffer: ArrayBuffer): void {
         const cartridge = new Cartridge(parseCartridge(buffer));
-        this.gameSession = new GameSession(cartridge, this.createScreenInterface(), this.createControllerInterface());
+        this.gameSession = GameSession.fromCartridge(cartridge, this.createScreenInterface(), this.createControllerInterface());
         this.render();
     }
 

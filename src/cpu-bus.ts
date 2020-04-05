@@ -4,11 +4,16 @@ import {Ppu} from './ppu';
 import {Constants} from './constants';
 import {Cartridge} from './cartridge';
 import {ControllerInterface, defaultControllerInterface} from './controller';
+import {fillUint8Array} from './utils/utils';
 
 const enum CpuBusConstants {
     CONTROLLER_1_ADDR = 0x4016,
     CONTROLLER_2_ADDR = 0x4017,
     OAM_DMA_ADDR = 0x4014
+}
+
+export interface CpuBusState {
+    ram: Uint8[];
 }
 
 /**
@@ -28,8 +33,12 @@ class CpuBus implements Bus {
         private readonly cartridge: Cartridge,
         private readonly ppu: Ppu,
         private readonly controller1Interface: ControllerInterface = defaultControllerInterface,
-        private readonly controller2Interface: ControllerInterface = defaultControllerInterface
+        private readonly controller2Interface: ControllerInterface = defaultControllerInterface,
+        state?: CpuBusState
     ) {
+        if (state) {
+            fillUint8Array(this.ram, state.ram);
+        }
     }
 
     get isOamDmaTransfer(): boolean {
@@ -109,6 +118,10 @@ class CpuBus implements Bus {
         }
 
         throw Error(`Can't map addr "${addr}" to device`);
+    }
+
+    serialize(): CpuBusState {
+        return {ram: Array.from(this.ram)};
     }
 }
 

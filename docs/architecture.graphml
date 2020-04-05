@@ -13,9 +13,8 @@
   <key attr.name="description" attr.type="string" for="edge" id="d9"/>
   <key for="edge" id="d10" yfiles.type="edgegraphics"/>
   <graph edgedefault="directed" id="G">
-    <data key="d0"/>
+    <data key="d0" xml:space="preserve"/>
     <node id="n0">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.entityRelationship.big_entity">
           <y:Geometry height="236.0" width="190.0" x="679.5" y="0.0"/>
@@ -37,17 +36,19 @@
       </data>
     </node>
     <node id="n1">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.entityRelationship.big_entity">
           <y:Geometry height="195.0" width="169.0" x="0.0" y="275.5"/>
           <y:Fill color="#E8EEF7" color2="#B7C9E3" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" backgroundColor="#B7C9E3" configuration="com.yworks.entityRelationship.label.name" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.1328125" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="25.66796875" x="71.666015625" xml:space="preserve" y="4.0">Nes</y:NodeLabel>
-          <y:NodeLabel alignment="left" autoSizePolicy="content" configuration="com.yworks.entityRelationship.label.attributes" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="60.53125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="top" visible="true" width="47.96875" x="2.0" xml:space="preserve" y="30.1328125">-clock
+          <y:NodeLabel alignment="left" autoSizePolicy="content" configuration="com.yworks.entityRelationship.label.attributes" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="102.9296875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="top" visible="true" width="88.10546875" x="2.0" xml:space="preserve" y="30.1328125">-clock
 ---
 +run
-+pause<y:LabelModel><y:ErdAttributesNodeLabelModel/></y:LabelModel><y:ModelParameter><y:ErdAttributesNodeLabelModelParameter/></y:ModelParameter></y:NodeLabel>
++pause
++serialize
+---
+fromSerialized<y:LabelModel><y:ErdAttributesNodeLabelModel/></y:LabelModel><y:ModelParameter><y:ErdAttributesNodeLabelModelParameter/></y:ModelParameter></y:NodeLabel>
           <y:StyleProperties>
             <y:Property class="java.lang.Boolean" name="y.view.ShadowNodePainter.SHADOW_PAINTING" value="true"/>
           </y:StyleProperties>
@@ -55,7 +56,6 @@
       </data>
     </node>
     <node id="n2">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.entityRelationship.big_entity">
           <y:Geometry height="195.0" width="169.0" x="450.0" y="515.5"/>
@@ -77,7 +77,6 @@
       </data>
     </node>
     <node id="n3">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.entityRelationship.big_entity">
           <y:Geometry height="195.0" width="169.0" x="450.0" y="755.5"/>
@@ -99,7 +98,6 @@
       </data>
     </node>
     <node id="n4">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.entityRelationship.big_entity">
           <y:Geometry height="195.0" width="169.0" x="225.0" y="995.5"/>
@@ -121,7 +119,6 @@
       </data>
     </node>
     <node id="n5">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.entityRelationship.big_entity">
           <y:Geometry height="204.0" width="181.33333333333331" x="443.83333333333337" y="1246.0"/>
@@ -143,7 +140,6 @@
       </data>
     </node>
     <edge id="e0" source="n0" target="n1">
-      <data key="d9"/>
       <data key="d10">
         <y:GenericEdge configuration="com.yworks.edge.framed">
           <y:Path sx="-15.0" sy="118.0" tx="0.0" ty="-97.5">
@@ -151,12 +147,11 @@
             <y:Point x="84.5" y="253.0"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="3.0"/>
-          <y:Arrows source="none" target="standard"/>
+          <y:Arrows source="standard" target="none"/>
         </y:GenericEdge>
       </data>
     </edge>
     <edge id="e1" source="n1" target="n2">
-      <data key="d9"/>
       <data key="d10">
         <y:GenericEdge configuration="com.yworks.edge.framed">
           <y:Path sx="45.0" sy="97.5" tx="0.0" ty="-97.5">
@@ -164,12 +159,11 @@
             <y:Point x="534.5" y="493.0"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="3.0"/>
-          <y:Arrows source="none" target="standard"/>
+          <y:Arrows source="standard" target="none"/>
         </y:GenericEdge>
       </data>
     </edge>
     <edge id="e2" source="n1" target="n3">
-      <data key="d9"/>
       <data key="d10">
         <y:GenericEdge configuration="com.yworks.edge.framed">
           <y:Path sx="30.0" sy="97.5" tx="-15.0" ty="-97.5">
@@ -177,12 +171,11 @@
             <y:Point x="519.5" y="733.0"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="3.0"/>
-          <y:Arrows source="none" target="standard"/>
+          <y:Arrows source="standard" target="none"/>
         </y:GenericEdge>
       </data>
     </edge>
     <edge id="e3" source="n0" target="n5">
-      <data key="d9"/>
       <data key="d10">
         <y:GenericEdge configuration="com.yworks.edge.framed">
           <y:Path sx="0.0" sy="118.0" tx="15.0" ty="-102.0">
@@ -190,12 +183,11 @@
             <y:Point x="549.5" y="1228.0"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="3.0"/>
-          <y:Arrows source="none" target="standard"/>
+          <y:Arrows source="standard" target="none"/>
         </y:GenericEdge>
       </data>
     </edge>
     <edge id="e4" source="n1" target="n5">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="97.5" tx="-30.0" ty="-102.0">
@@ -209,7 +201,6 @@
       </data>
     </edge>
     <edge id="e5" source="n3" target="n5">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="97.5" tx="0.0" ty="-102.0"/>
@@ -220,7 +211,6 @@
       </data>
     </edge>
     <edge id="e6" source="n4" target="n5">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="97.5" tx="-15.0" ty="-102.0">
@@ -234,7 +224,6 @@
       </data>
     </edge>
     <edge id="e7" source="n2" target="n3">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="97.5" tx="0.0" ty="-97.5"/>
@@ -245,7 +234,6 @@
       </data>
     </edge>
     <edge id="e8" source="n1" target="n4">
-      <data key="d9"/>
       <data key="d10">
         <y:GenericEdge configuration="com.yworks.edge.framed">
           <y:Path sx="15.0" sy="97.5" tx="-15.0" ty="-97.5">
@@ -253,12 +241,11 @@
             <y:Point x="294.5" y="973.0"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="3.0"/>
-          <y:Arrows source="none" target="standard"/>
+          <y:Arrows source="standard" target="none"/>
         </y:GenericEdge>
       </data>
     </edge>
     <edge id="e9" source="n3" target="n4">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="-15.0" sy="97.5" tx="0.0" ty="-97.5">

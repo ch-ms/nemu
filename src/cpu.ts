@@ -12,6 +12,16 @@ type BitValue = 0 | 1;
 type AdditionalCycleFlag = BitValue;
 type AddrModeReturnValue = [Uint16, AdditionalCycleFlag];
 
+export interface CpuState {
+    a: Uint8;
+    x: Uint8;
+    y: Uint8;
+    stackPointer: Uint8;
+    programCounter: Uint16;
+    status: Uint8;
+    remainingCycles: number;
+}
+
 const enum StatusFlags {
     CARRY = 1 << 0,
     ZERO = 1 << 1,
@@ -37,16 +47,25 @@ class Cpu {
     private _a: Uint8 = 0;
     private _x: Uint8 = 0;
     private _y: Uint8 = 0;
-    private _stackPointer: Uint8 = 0; // Points to location on bus
+    private _stackPointer: Uint8 = 0;
     private _programCounter: Uint16 = 0;
     private _status: Uint8 = 0;
 
     private _remainingCycles = 0;
 
-    private readonly _bus: Bus;
-
-    constructor(bus: Bus) {
-        this._bus = bus;
+    constructor(
+        private readonly _bus: Bus,
+        state?: CpuState
+    ) {
+        if (state) {
+            this._a = state.a;
+            this._x = state.x;
+            this._y = state.y;
+            this._stackPointer = state.stackPointer;
+            this._programCounter = state.programCounter;
+            this._status = state.status;
+            this._remainingCycles = state.remainingCycles;
+        }
     }
 
     get a(): Uint8 {
@@ -202,6 +221,18 @@ class Cpu {
         }
 
         this._remainingCycles -= 1;
+    }
+
+    serialize(): CpuState {
+        return {
+            a: this._a,
+            x: this._x,
+            y: this._y,
+            stackPointer: this._stackPointer,
+            programCounter: this._programCounter,
+            status: this._status,
+            remainingCycles: this._remainingCycles
+        };
     }
 
     // TODO: function description

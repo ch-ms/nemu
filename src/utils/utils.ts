@@ -50,10 +50,21 @@ function* iteratePage(addrInPage: Uint16): IterableIterator<number> {
     }
 }
 
+function fillUint8Array(target: Uint8Array, source: number[]): void {
+    if (target.length !== source.length) {
+        throw new Error(`Length does not match "${target.length} != ${source.length}"`);
+    }
+
+    for (const [i, v] of source.entries()) {
+        target[i] = v;
+    }
+}
+
 export {
     cpuStatusToFormattedString,
     uint8ToHex,
     uint16ToHex,
     iterateRam,
-    iteratePage
+    iteratePage,
+    fillUint8Array
 };

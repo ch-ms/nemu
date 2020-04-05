@@ -1,19 +1,28 @@
 import {Uint8, Uint16} from './numbers';
 import {Device} from './interfaces';
-import {CartridgeData} from './cartridge-parser';
 import {createMapper, Mapper} from './mapper';
 import {MirroringMode} from './mirroring-mode';
+import {
+    CartridgeData,
+    SerializedCartridgeData,
+    serializeCartridgeData,
+    deserializeCartridgeData
+} from './cartridge-parser';
 
 /**
  * Cartridge contains game data
  */
+
+export interface CartridgeState {
+    cartridgeData: Readonly<SerializedCartridgeData>;
+}
 
 class Cartridge implements Device {
     private readonly mapper: Mapper;
 
     readonly mirroringMode: MirroringMode;
 
-    constructor(private readonly cartridgeData: CartridgeData) {
+    constructor(private readonly cartridgeData: Readonly<CartridgeData>) {
         this.mapper = createMapper(cartridgeData.header);
 
         this.mirroringMode = this.cartridgeData.header.mirroring;
@@ -53,6 +62,14 @@ class Cartridge implements Device {
         } else {
             throw new Error(`Can't write to addr "${addr}"`);
         }
+    }
+
+    serialize(): CartridgeState {
+        return {cartridgeData: serializeCartridgeData(this.cartridgeData)};
+    }
+
+    static fromSerializedState(state: CartridgeState): Cartridge {
+        return new Cartridge(deserializeCartridgeData(state.cartridgeData));
     }
 }
 

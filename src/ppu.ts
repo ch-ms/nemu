@@ -6,6 +6,7 @@ import {Color} from './color';
 import {MirroringMode} from './mirroring-mode';
 import {Constants} from './constants';
 import {LoopyRegister} from './loopy-register';
+import {fillUint8Array} from './utils/utils';
 
 const enum PpuConstants {
     CONTROL_REGISTER = 0x0,
@@ -91,6 +92,32 @@ const DEFAULT_SCREEN_INTERFACE: ScreenInterface = {
     frameCompleted: () => {}
 };
 
+// TODO we need to serialize less data
+// As a guess: we can serialize data on a -1 scanline (or something with stable state)
+// If user can read data it definetly must be serialized
+export interface PpuState {
+    cycle: number;
+    scanline: number;
+    nmiFlag: boolean;
+    statusRegister: Uint8;
+    maskRegister: Uint8;
+    controlRegister: Uint8;
+
+    palette: Uint8[];
+
+    nametable0: Uint8[];
+    nametable1: Uint8[];
+    vram: number;
+    tram: number;
+    fineX: number;
+
+    oam: Uint8[];
+    oamAddr: Uint8;
+
+    dataBuffer: Uint8;
+    isAddrHigherByte: boolean;
+}
+
 /**
  * Nes Picture Processing Unit
  */
@@ -132,8 +159,31 @@ class Ppu implements Device {
 
     constructor(
         private readonly cartridge: Cartridge,
-        private readonly screenInterface = DEFAULT_SCREEN_INTERFACE
+        private readonly screenInterface = DEFAULT_SCREEN_INTERFACE,
+        state?: PpuState
     ) {
+        if (state) {
+            this.cycle = state.cycle;
+            this.scanline = state.scanline;
+            this.nmiFlag = state.nmiFlag;
+            this.statusRegister = state.statusRegister;
+            this.maskRegister = state.maskRegister;
+            this.controlRegister = state.controlRegister;
+
+            fillUint8Array(this.palette, state.palette);
+            fillUint8Array(this.nametable0, state.nametable0);
+            fillUint8Array(this.nametable1, state.nametable1);
+
+            this.vram.value = state.vram;
+            this.tram.value = state.tram;
+            this.fineX = state.fineX;
+
+            fillUint8Array(this.oam, state.oam);
+            this.oamAddr = state.oamAddr;
+
+            this.dataBuffer = state.dataBuffer;
+            this.isAddrHigherByte = state.isAddrHigherByte;
+        }
     }
 
     reset(): void {
@@ -556,6 +606,31 @@ class Ppu implements Device {
             default:
                 return addr;
         }
+    }
+
+    serialize(): PpuState {
+        return {
+            cycle: this.cycle,
+            scanline: this.scanline,
+            nmiFlag: this.nmiFlag,
+            statusRegister: this.statusRegister,
+            maskRegister: this.maskRegister,
+            controlRegister: this.controlRegister,
+
+            palette: Array.from(this.palette.values()),
+
+            nametable0: Array.from(this.nametable0.values()),
+            nametable1: Array.from(this.nametable1.values()),
+            vram: this.vram.value,
+            tram: this.tram.value,
+            fineX: this.fineX,
+
+            oam: Array.from(this.oam.values()),
+            oamAddr: this.oamAddr,
+
+            dataBuffer: this.dataBuffer,
+            isAddrHigherByte: this.isAddrHigherByte
+        };
     }
 
     private mirrorNametable(addr: Uint16): {nametable: Uint8Array, index: number} {
