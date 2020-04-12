@@ -1,7 +1,7 @@
 import {Cpu, CpuConstants} from './cpu';
 import {DebuggerBus} from './debugger-bus';
 
-const enum CpuDebuggerConstants {
+export const enum CpuDebuggerConstants {
     BASE_PRG_ADDR = 0x8000
 }
 
@@ -49,4 +49,4 @@ class CpuDebugger {
     }
 }
 
-export {CpuDebugger, CpuDebuggerConstants};
+export {CpuDebugger};

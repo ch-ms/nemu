@@ -22,7 +22,7 @@ export interface CpuState {
     remainingCycles: number;
 }
 
-const enum StatusFlags {
+export const enum StatusFlags {
     CARRY = 1 << 0,
     ZERO = 1 << 1,
     DISABLE_INTERRUPTS = 1 << 2,
@@ -33,7 +33,7 @@ const enum StatusFlags {
     NEGATIVE = 1 << 7
 }
 
-const enum CpuConstants {
+export const enum CpuConstants {
     BASE_STACK_ADDR = 0x0100,
     BASE_STACK_OFFSET = 0xfd,
     BASE_INSTRUCTION_ADDR = 0xfffc,
@@ -1368,4 +1368,4 @@ class Cpu {
     }
 }
 
-export {Cpu, CpuConstants, StatusFlags};
+export {Cpu};

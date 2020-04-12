@@ -1,6 +1,7 @@
 import {Color} from './color';
 
 // https://wiki.nesdev.com/w/index.php/PPU_palettes
+// TODO resolve as array
 const ppuPalette: Record<string, Color> = {
     0x00: [84, 84, 84],
     0x01: [0, 30, 116],

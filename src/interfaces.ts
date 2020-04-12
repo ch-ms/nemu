@@ -23,4 +23,4 @@ interface Device extends ReadableWriteable {
 interface Bus extends ReadableWriteable {
 }
 
-export {Device, Bus};
+export {Device, Bus, Writable};

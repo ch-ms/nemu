@@ -60,11 +60,39 @@ function fillUint8Array(target: Uint8Array, source: number[]): void {
     }
 }
 
+class Logger {
+    private previousArgs: any[] | null = null;
+
+    log(args: any[]): void {
+        if (this.previousArgs && args.length !== this.previousArgs.length) {
+            throw new Error('args dimensions mismatch');
+        }
+
+        let log = false;
+        if (this.previousArgs) {
+            for (const [i, v] of this.previousArgs.entries()) {
+                log = args[i] !== v;
+
+                if (log) {
+                    break;
+                }
+            }
+        }
+
+        if (log) {
+            console.log(...args);
+        }
+
+        this.previousArgs = args;
+    }
+}
+
 export {
     cpuStatusToFormattedString,
     uint8ToHex,
     uint16ToHex,
     iterateRam,
     iteratePage,
-    fillUint8Array
+    fillUint8Array,
+    Logger
 };

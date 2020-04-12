@@ -1,6 +1,6 @@
 import {Uint8} from './numbers';
 
-const enum ControllerButtons {
+export const enum ControllerButtons {
     A = 1 << 7,
     B = 1 << 6,
     SELECT = 1 << 5,
@@ -18,7 +18,6 @@ function defaultControllerInterface(): Uint8 {
 }
 
 export {
-    ControllerButtons,
     ControllerInterface,
     defaultControllerInterface
 };

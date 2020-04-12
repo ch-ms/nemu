@@ -8,7 +8,7 @@ import {Constants} from './constants';
 import {LoopyRegister} from './loopy-register';
 import {fillUint8Array} from './utils/utils';
 
-const enum PpuConstants {
+export const enum PpuConstants {
     CONTROL_REGISTER = 0x0,
     MASK_REGISTER = 0x1,
     STATUS_REGISTER = 0x2,
@@ -19,6 +19,7 @@ const enum PpuConstants {
     PPU_DATA_REGISTER = 0x7,
     CYCLES_PER_SCANLINE = 341,
     VISIBLE_SCANLINE_END_CYCLE = 257,
+    FRAME_VISIBLE_SCANLINES = 240,
     FRAME_SCANLINES = 261,
     PALETTE_START_ADDR = 0x3f00,
     NAMETABLE_START_ADDR = 0x2000,
@@ -560,7 +561,12 @@ class Ppu implements Device {
         }
 
         const color = ppuPalette[this.ppuRead(PpuConstants.PALETTE_START_ADDR + (palette * 4) + pixel) & 0x3F];
-        this.screenInterface.setPixel(this.cycle, this.scanline, color);
+        if (
+            this.cycle < PpuConstants.VISIBLE_SCANLINE_END_CYCLE &&
+            this.scanline <= PpuConstants.FRAME_VISIBLE_SCANLINES
+        ) {
+            this.screenInterface.setPixel(this.cycle, this.scanline, color);
+        }
 
         // Advance cycles
         this.cycle++;
@@ -718,6 +724,5 @@ class Ppu implements Device {
 
 export {
     Ppu,
-    PpuConstants,
     ScreenInterface
 };

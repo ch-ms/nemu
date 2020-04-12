@@ -1,6 +1,7 @@
 import {Uint16, Uint8, Numbers} from './numbers';
 import {Bus} from './interfaces';
 import {Ppu} from './ppu';
+import {Apu, ApuConstants} from './apu';
 import {Constants} from './constants';
 import {Cartridge} from './cartridge';
 import {ControllerInterface, defaultControllerInterface} from './controller';
@@ -32,6 +33,7 @@ class CpuBus implements Bus {
     constructor(
         private readonly cartridge: Cartridge,
         private readonly ppu: Ppu,
+        private readonly apu: Apu,
         private readonly controller1Interface: ControllerInterface = defaultControllerInterface,
         private readonly controller2Interface: ControllerInterface = defaultControllerInterface,
         state?: CpuBusState
@@ -71,53 +73,85 @@ class CpuBus implements Bus {
         return this.oamDmaTransfer;
     }
 
-    write(addr: Uint16, data: Uint8): void {
-        if (addr >= 0x0 && addr < 0x2000) {
-            this.ram[addr % 0x800] = data;
-        } else if (addr >= 0x2000 && addr < 0x4000) {
-            this.ppu.write(addr % 0x8, data);
-        } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
-            this.controller1Shifter = this.controller1Interface();
-        } else if (addr === CpuBusConstants.CONTROLLER_2_ADDR) {
-            this.controller2Shifter = this.controller2Interface();
-        } else if (addr === CpuBusConstants.OAM_DMA_ADDR) {
-            this.oamDmaPage = data;
-            this.oamDmaOffset = 0;
-            this.oamDmaTransfer = true;
-        } else if (addr >= 0x4000 && addr < 0x4020) {
-            // TODO map to APU
-        } else if (addr >= 0x4020 && addr < 0x10000) {
-            this.cartridge.write(addr, data);
-        } else {
-            throw Error(`Can't map addr "${addr}" to device`);
-        }
-    }
-
     // TODO mb some mechanism to perform addr mapping?
     read(addr: Uint16): Uint8 {
         if (addr >= 0x0 && addr < 0x2000) {
             return this.ram[addr % 0x800];
+
         } else if (addr >= 0x2000 && addr < 0x4000) {
             return this.ppu.read(addr % 0x8);
+
+        } else if (addr >= ApuConstants.PULSE_1_CONTROL && addr < CpuBusConstants.OAM_DMA_ADDR) {
+            // Apu is not readable
+            return 0;
+
+        } else if (addr === CpuBusConstants.OAM_DMA_ADDR) {
+            // OAM DMA is not readable
+            return 0;
+
+        } else if (addr === ApuConstants.STATUS) {
+            // Apu is not readable
+            return 0;
+
         } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
             const data = (this.controller1Shifter & Constants.BIT_7) && 1;
             this.controller1Shifter = (this.controller1Shifter << 1) & Numbers.UINT8_CAST;
             return data;
+
         } else if (addr === CpuBusConstants.CONTROLLER_2_ADDR) {
             const data = (this.controller2Shifter & Constants.BIT_7) && 1;
             this.controller2Shifter = (this.controller2Shifter << 1) & Numbers.UINT8_CAST;
             return data;
-        } else if (addr === CpuBusConstants.OAM_DMA_ADDR) {
-            // OAM DMA is not readable
+
+        } else if (addr >= 0x4018 && addr < 0x4020) {
+            // Apu and IO functionality that is normally disabled
+            // https://wiki.nesdev.com/w/index.php/CPU_Test_Mode
             return 0;
-        } else if (addr >= 0x4000 && addr < 0x4020) {
-            // TODO map to APU
-            return 0;
+
         } else if (addr >= 0x4020 && addr < 0x10000) {
             return this.cartridge.read(addr);
         }
 
         throw Error(`Can't map addr "${addr}" to device`);
+    }
+
+    write(addr: Uint16, data: Uint8): void {
+        if (addr >= 0x0 && addr < 0x2000) {
+            this.ram[addr % 0x800] = data;
+
+        } else if (addr >= 0x2000 && addr < 0x4000) {
+            this.ppu.write(addr % 0x8, data);
+
+        } else if (addr >= ApuConstants.PULSE_1_CONTROL && addr < CpuBusConstants.OAM_DMA_ADDR) {
+            this.apu.write(addr, data);
+
+        } else if (addr === CpuBusConstants.OAM_DMA_ADDR) {
+            this.oamDmaPage = data;
+            this.oamDmaOffset = 0;
+            this.oamDmaTransfer = true;
+
+        } else if (addr === ApuConstants.STATUS) {
+            this.apu.write(addr, data);
+
+        } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
+            // See https://wiki.nesdev.com/w/index.php/Controller_reading for proper implementation
+            // See https://wiki.nesdev.com/w/index.php/2A03
+            this.controller1Shifter = this.controller1Interface();
+            this.controller2Shifter = this.controller2Interface();
+
+        } else if (addr === ApuConstants.FRAME_COUNTER) {
+            this.apu.write(addr, data);
+
+        } else if (addr >= 0x4018 && addr < 0x4020) {
+            // Apu and IO functionality that is normally disabled
+            // https://wiki.nesdev.com/w/index.php/CPU_Test_Mode
+
+        } else if (addr >= 0x4020 && addr < 0x10000) {
+            this.cartridge.write(addr, data);
+
+        } else {
+            throw Error(`Can't map addr "${addr}" to device`);
+        }
     }
 
     serialize(): CpuBusState {
