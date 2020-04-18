@@ -94,12 +94,12 @@ class CpuBus implements Bus {
             return 0;
 
         } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
-            const data = (this.controller1Shifter & Constants.BIT_7) && 1;
+            const data = (this.controller1Shifter & Constants.BIT_8) && 1;
             this.controller1Shifter = (this.controller1Shifter << 1) & Numbers.UINT8_CAST;
             return data;
 
         } else if (addr === CpuBusConstants.CONTROLLER_2_ADDR) {
-            const data = (this.controller2Shifter & Constants.BIT_7) && 1;
+            const data = (this.controller2Shifter & Constants.BIT_8) && 1;
             this.controller2Shifter = (this.controller2Shifter << 1) & Numbers.UINT8_CAST;
             return data;
 

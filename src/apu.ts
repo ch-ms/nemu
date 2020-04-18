@@ -2,6 +2,9 @@ import {Uint8, Uint16} from './numbers';
 import {Writable} from './interfaces';
 import {AudioGraph} from './audio-graph';
 import {DutyCycle, PulseChannel} from './pulse-channel';
+import {TriangleChannel} from './triangle-channel';
+import {Constants} from './constants';
+import {Numbers} from './numbers';
 
 // https://wiki.nesdev.com/w/index.php/APU_registers
 export const enum ApuConstants {
@@ -49,6 +52,7 @@ const LENGTH_LOOKUP = [
 class Apu implements Writable {
     private readonly pulse1: PulseChannel;
     private readonly pulse2: PulseChannel;
+    private readonly triangle: TriangleChannel;
 
     private frameClockCounter = 0;
 
@@ -57,6 +61,7 @@ class Apu implements Writable {
     ) {
         this.pulse1 = new PulseChannel(audioGraph && audioGraph.pulseWave1);
         this.pulse2 = new PulseChannel(audioGraph && audioGraph.pulseWave2, 1);
+        this.triangle = new TriangleChannel(audioGraph);
     }
 
     write(addr: Uint16, data: Uint8): void {
@@ -109,6 +114,8 @@ class Apu implements Writable {
             }
 
             case ApuConstants.TRIANGLE_CONTROL_1:
+                this.triangle.control = (data & Constants.BIT_8) && 1;
+                this.triangle.linearCounterReload = data & 0b01111111;
                 break;
 
             case ApuConstants.TRIANGLE_CONTROL_2:
@@ -116,9 +123,15 @@ class Apu implements Writable {
                 break;
 
             case ApuConstants.TRIANGLE_FREQUENCY_1:
+                this.triangle.timer = (this.triangle.timer & 0xff00) | data;
                 break;
 
             case ApuConstants.TRIANGLE_FREQUENCY_2:
+                this.triangle.timer = (this.triangle.timer & Numbers.UINT8_CAST) | ((data & 0b111) << 8);
+                if (this.triangle.enable) {
+                    this.triangle.lengthCounter = LENGTH_LOOKUP[data >>> 3];
+                }
+                this.triangle.linearCounterReloadFlag = true;
                 break;
 
             case ApuConstants.NOISE_CONTROL_1:
@@ -163,6 +176,11 @@ class Apu implements Writable {
                 this.pulse2.enable = (data & 0b10) && 1;
                 if (!this.pulse2.enable) {
                     this.pulse2.length = 0;
+                }
+
+                this.triangle.enable = (data & Constants.BIT_3) && 1;
+                if (!this.triangle.enable) {
+                    this.triangle.lengthCounter = 0;
                 }
                 break;
 
@@ -219,6 +237,7 @@ class Apu implements Writable {
             this.pulse2.halfFrameClock();
         }
 
+        this.triangle.clock(quarterFrameClock, halfFrameClock);
         // TODO only clock and pass flags
         this.pulse1.clock();
         this.pulse2.clock();
