@@ -1,5 +1,11 @@
 export const enum Constants {
     KILOBYTE = 1024,
     BIT_8 = 0b10000000,
-    BIT_3 = 0b00000100
+    BIT_7 = 0b01000000,
+    BIT_6 = 0b00100000,
+    BIT_5 = 0b00010000,
+    BIT_4 = 0b00001000,
+    BIT_3 = 0b00000100,
+    BIT_2 = 0b00000010,
+    BIT_1 = 0b00000001,
 }

@@ -11,13 +11,14 @@ import {ControllerInterface} from './controller';
  */
 
 export const enum Timings {
-    PPU_CLOCK_PER_CPU_CLOCK = 3,
+    CPU_CLOCK_PER_PPU_CLOCK = 3,
     APU_CLOCK_PER_PPU_CLOCK = 6,
 
     MASTER_CLOCK_HZ = 21477272,
     PPU_CLOCK_HZ = Timings.MASTER_CLOCK_HZ / 4,
     PPU_CLOCK_MILLIHZ = PPU_CLOCK_HZ / 1000,
-    CPU_CLOCK_HZ = Timings.PPU_CLOCK_HZ / Timings.PPU_CLOCK_PER_CPU_CLOCK,
+    CPU_CLOCK_HZ = Timings.PPU_CLOCK_HZ / Timings.CPU_CLOCK_PER_PPU_CLOCK,
+    APU_CLOCK_HZ = Timings.PPU_CLOCK_HZ / Timings.APU_CLOCK_PER_PPU_CLOCK
 }
 
 interface Options {
@@ -179,7 +180,7 @@ class Nes {
     }
 
     private get cpuWillBeClocked(): boolean {
-        return this.cycle % Timings.PPU_CLOCK_PER_CPU_CLOCK === 0;
+        return this.cycle % Timings.CPU_CLOCK_PER_PPU_CLOCK === 0;
     }
 
     static fromSerializedState(state: NesState, options: Options = {}): Nes {

@@ -3,6 +3,7 @@ import {Writable} from './interfaces';
 import {AudioGraph} from './audio-graph';
 import {DutyCycle, PulseChannel} from './pulse-channel';
 import {TriangleChannel} from './triangle-channel';
+import {NoiseChannel} from './noise-channel';
 import {Constants} from './constants';
 import {Numbers} from './numbers';
 
@@ -45,6 +46,11 @@ const LENGTH_LOOKUP = [
     0xc0, 0x18, 0x48, 0x1a, 0x10, 0x1c, 0x20, 0x1e
 ];
 
+// NTSC
+const NOISE_PERIOD_LOOKUP = [
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+];
+
 /**
  * Nes Audio Processing Unit
  */
@@ -53,6 +59,7 @@ class Apu implements Writable {
     private readonly pulse1: PulseChannel;
     private readonly pulse2: PulseChannel;
     private readonly triangle: TriangleChannel;
+    private readonly noise: NoiseChannel;
 
     private frameClockCounter = 0;
 
@@ -62,6 +69,7 @@ class Apu implements Writable {
         this.pulse1 = new PulseChannel(audioGraph && audioGraph.pulseWave1);
         this.pulse2 = new PulseChannel(audioGraph && audioGraph.pulseWave2, 1);
         this.triangle = new TriangleChannel(audioGraph);
+        this.noise = new NoiseChannel(audioGraph);
     }
 
     write(addr: Uint16, data: Uint8): void {
@@ -135,14 +143,22 @@ class Apu implements Writable {
                 break;
 
             case ApuConstants.NOISE_CONTROL_1:
+                this.noise.lengthHalt = (data & Constants.BIT_6) && 1;
+                this.noise.envelopeDisable = (data & Constants.BIT_5) && 1;
+                this.noise.volume = (data & 0xf);
                 break;
 
             case ApuConstants.NOISE_FREQUENCY_1:
+                this.noise.mode = (data & Constants.BIT_8) && 1;
+                this.noise.period = NOISE_PERIOD_LOOKUP[data & 0xf];
                 break;
 
             case ApuConstants.NOISE_FREQUENCY_2:
+                this.noise.lengthCounter = LENGTH_LOOKUP[data >>> 3];
+                // TODO do we need to reset envelope for pulses?
                 this.pulse1.envelopeResetNextClock = true;
                 this.pulse2.envelopeResetNextClock = true;
+                this.noise.envelopeResetNextClock = true;
                 break;
 
             case ApuConstants.DELTA_MODULATION_CONTROL:
@@ -162,8 +178,6 @@ class Apu implements Writable {
             // Afterwards the Frame Sequencer's frame interrupt flag is cleared.
             case ApuConstants.STATUS:
                 // TODO clear DMC IRQ flag
-                // TODO enable triangle wave
-                // TODO enable noise channel
                 // TODO enable dmc channel
                 // TODO If d is set and the DMC's DMA reader has no more sample bytes to fetch, the DMC sample is restarted. If d is clear then the DMA reader's sample bytes remaining is set to 0.
                 this.pulse1.enable = (data & 0b1) && 1;
@@ -181,6 +195,11 @@ class Apu implements Writable {
                 this.triangle.enable = (data & Constants.BIT_3) && 1;
                 if (!this.triangle.enable) {
                     this.triangle.lengthCounter = 0;
+                }
+
+                this.noise.enable = (data & Constants.BIT_4) && 1;
+                if (!this.noise.enable) {
+                    this.noise.lengthCounter = 0;
                 }
                 break;
 
@@ -238,6 +257,7 @@ class Apu implements Writable {
         }
 
         this.triangle.clock(quarterFrameClock, halfFrameClock);
+        this.noise.clock(quarterFrameClock, halfFrameClock);
         // TODO only clock and pass flags
         this.pulse1.clock();
         this.pulse2.clock();
