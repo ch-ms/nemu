@@ -3,6 +3,9 @@ import {Cpu, CpuState} from './cpu';
 import {Ppu, ScreenInterface, PpuState} from './ppu';
 import {Apu} from './apu';
 import {AudioGraph} from './audio-graph';
+import {Clock} from './clock';
+import {AudioClock} from './audio-clock';
+import {RafClock} from './raf-clock';
 import {Cartridge, CartridgeState} from './cartridge';
 import {ControllerInterface} from './controller';
 
@@ -42,8 +45,9 @@ class Nes {
     readonly apu: Apu;
     readonly audioGraph?: AudioGraph;
 
+    readonly clock: Clock;
+
     private cycle = 0;
-    private previousAnimationFrame = -1;
 
     private oamDmaInitialized = false;
 
@@ -56,9 +60,15 @@ class Nes {
             options.screenInterface,
             options.state ? options.state.ppu : undefined
         );
-        if (typeof window !== 'undefined') {
-            this.audioGraph = new AudioGraph();
+
+        if (typeof window !== 'undefined' && typeof (window as any).AudioContext !== 'undefined') {
+            const audioClock = new AudioClock(this.tick);
+            this.clock = audioClock;
+            this.audioGraph = new AudioGraph(audioClock.context);
+        } else {
+            this.clock = new RafClock(this.tick);
         }
+
         this.apu = new Apu(this.audioGraph);
         this.bus = new CpuBus(
             this.cartridge,
@@ -75,10 +85,6 @@ class Nes {
         }
     }
 
-    get isRunning(): boolean {
-        return this.previousAnimationFrame !== -1;
-    }
-
     getCycle(): number {
         return this.cycle;
     }
@@ -92,29 +98,22 @@ class Nes {
 
     stepOperation(): void {
         while (!this.cpuWillBeClocked) {
-            this.clock();
+            this.tick();
         }
 
-        this.clock();
+        this.tick();
 
         while (this.cpu.remainingCycles !== 0) {
-            this.clock();
+            this.tick();
         }
     }
 
     run(): void {
-        if (this.isRunning) {
-            return;
-        }
-
-        this.audioGraph && this.audioGraph.resume();
-        this.previousAnimationFrame = performance.now();
-        this.runAutoClock();
+        this.clock.resume();
     }
 
     pause(): void {
-        this.audioGraph && this.audioGraph.suspend();
-        this.previousAnimationFrame = -1;
+        this.clock.suspend();
     }
 
     serialize(): NesState {
@@ -126,7 +125,7 @@ class Nes {
         };
     }
 
-    private clock(): void {
+    private tick = (): void => {
         // TODO why we clock ppu first? Cpu can change ppu state at clock. So it is kinda unstable?
         this.ppu.clock();
 
@@ -158,25 +157,6 @@ class Nes {
         }
 
         this.cycle++;
-    }
-
-    private runAutoClock = (carry = 0): void => {
-        if (!this.isRunning) {
-            return;
-        }
-
-        // TODO if time distance is large then pause emulator
-
-        const time = performance.now();
-        const diff = time - this.previousAnimationFrame;
-        const rawClockNumber = Timings.PPU_CLOCK_MILLIHZ * diff + carry;
-        const clockNumber = Math.floor(rawClockNumber);
-        const nextCarry = rawClockNumber - clockNumber;
-        for (let i = 0; i < clockNumber; i++) {
-            this.clock();
-        }
-        this.previousAnimationFrame = time;
-        requestAnimationFrame(() => this.runAutoClock(nextCarry));
     }
 
     private get cpuWillBeClocked(): boolean {

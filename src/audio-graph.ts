@@ -16,12 +16,12 @@ class AudioGraph {
     readonly noiseVolume: GainNode;
     readonly volume: GainNode;
 
-    private readonly audioCtx: AudioContext;
     private triangleOn = false;
     private readonly triangleOutput: GainNode;
 
-    constructor() {
-        this.audioCtx = new (window as any).AudioContext();
+    constructor(
+        private readonly audioCtx: AudioContext
+    ) {
         this.pulseWave1 = new PulseWaveOscillator(this.audioCtx);
         this.pulseWave2 = new PulseWaveOscillator(this.audioCtx);
         this.triangle = this.audioCtx.createOscillator();
@@ -46,14 +46,6 @@ class AudioGraph {
 
         this.volume.gain.value = 0.1
         this.triangle.start();
-    }
-
-    resume(): void {
-        this.audioCtx.resume();
-    }
-
-    suspend(): void {
-        this.audioCtx.suspend();
     }
 
     toggleTriangle(on: boolean): void {
