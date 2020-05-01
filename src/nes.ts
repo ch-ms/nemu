@@ -2,7 +2,6 @@ import {CpuBus, CpuBusState} from './cpu-bus';
 import {Cpu, CpuState} from './cpu';
 import {Ppu, ScreenInterface, PpuState} from './ppu';
 import {Apu} from './apu';
-import {AudioGraph} from './audio-graph';
 import {Clock} from './clock';
 import {AudioClock} from './audio-clock';
 import {RafClock} from './raf-clock';
@@ -43,7 +42,6 @@ class Nes {
     readonly ppu: Ppu;
     readonly bus: CpuBus;
     readonly apu: Apu;
-    readonly audioGraph?: AudioGraph;
 
     readonly clock: Clock;
 
@@ -61,15 +59,13 @@ class Nes {
             options.state ? options.state.ppu : undefined
         );
 
+        this.apu = new Apu();
         if (typeof window !== 'undefined' && typeof (window as any).AudioContext !== 'undefined') {
-            const audioClock = new AudioClock(this.tick);
-            this.clock = audioClock;
-            this.audioGraph = new AudioGraph(audioClock.context);
+            this.clock = new AudioClock(this.apu, this.tick);
         } else {
             this.clock = new RafClock(this.tick);
         }
 
-        this.apu = new Apu(this.audioGraph);
         this.bus = new CpuBus(
             this.cartridge,
             this.ppu,

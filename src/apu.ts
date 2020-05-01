@@ -1,7 +1,6 @@
 import {Uint8, Uint16} from './numbers';
 import {Writable} from './interfaces';
-import {AudioGraph} from './audio-graph';
-import {DutyCycle, PulseChannel} from './pulse-channel';
+import {PulseChannel, DutyCycleIndex} from './pulse-channel';
 import {TriangleChannel} from './triangle-channel';
 import {NoiseChannel} from './noise-channel';
 import {Constants} from './constants';
@@ -35,10 +34,6 @@ export const enum ApuConstants {
     FRAME_COUNTER = 0x4017
 }
 
-const DUTY_CYCLE_LOOKUP: [DutyCycle, DutyCycle, DutyCycle, DutyCycle] = [
-    0.125, 0.25, 0.5, 0.75
-];
-
 const LENGTH_LOOKUP = [
     0xa, 0xfe, 0x14, 0x2, 0x28, 0x4, 0x50, 0x6,
     0xa0, 0x8, 0x3c, 0xa, 0xe, 0xc, 0x1a, 0xe,
@@ -56,20 +51,18 @@ const NOISE_PERIOD_LOOKUP = [
  */
 // TODO Except for the status register, all other registers are write-only. The "value of the register" refers to the last value written to the register.
 class Apu implements Writable {
-    private readonly pulse1: PulseChannel;
-    private readonly pulse2: PulseChannel;
-    private readonly triangle: TriangleChannel;
-    private readonly noise: NoiseChannel;
+    readonly pulse1: PulseChannel;
+    readonly pulse2: PulseChannel;
+    readonly triangle: TriangleChannel;
+    readonly noise: NoiseChannel;
 
     private frameClockCounter = 0;
 
-    constructor(
-        private readonly audioGraph?: AudioGraph
-    ) {
-        this.pulse1 = new PulseChannel(audioGraph && audioGraph.pulseWave1);
-        this.pulse2 = new PulseChannel(audioGraph && audioGraph.pulseWave2, 1);
-        this.triangle = new TriangleChannel(audioGraph);
-        this.noise = new NoiseChannel(audioGraph);
+    constructor() {
+        this.pulse1 = new PulseChannel();
+        this.pulse2 = new PulseChannel();
+        this.triangle = new TriangleChannel();
+        this.noise = new NoiseChannel();
     }
 
     write(addr: Uint16, data: Uint8): void {
@@ -78,7 +71,8 @@ class Apu implements Writable {
             case ApuConstants.PULSE_2_CONTROL: {
                 const channel = addr === ApuConstants.PULSE_1_CONTROL ? this.pulse1 : this.pulse2;
 
-                channel.duty = DUTY_CYCLE_LOOKUP[data >>> 6];
+                // Since we pick only 2 bits it match DutyCycleIndex perfectly
+                channel.setDuty(data >>> 6 as DutyCycleIndex);
                 channel.halt = (data & 0b100000) && 1;
 
                 channel.volume = data & 0b1111;
@@ -131,11 +125,11 @@ class Apu implements Writable {
                 break;
 
             case ApuConstants.TRIANGLE_FREQUENCY_1:
-                this.triangle.timer = (this.triangle.timer & 0xff00) | data;
+                this.triangle.period = (this.triangle.period & 0xff00) | data;
                 break;
 
             case ApuConstants.TRIANGLE_FREQUENCY_2:
-                this.triangle.timer = (this.triangle.timer & Numbers.UINT8_CAST) | ((data & 0b111) << 8);
+                this.triangle.period = (this.triangle.period & Numbers.UINT8_CAST) | ((data & 0b111) << 8);
                 if (this.triangle.enable) {
                     this.triangle.lengthCounter = LENGTH_LOOKUP[data >>> 3];
                 }
@@ -217,9 +211,6 @@ class Apu implements Writable {
         let quarterFrameClock = false;
         let halfFrameClock = false;
 
-        this.pulse1.preClock();
-        this.pulse2.preClock();
-
         // 4 step sequence mode
         // http://www.slack.net/~ant/nes-emu/apu_ref.txt
         // TODO calc values
@@ -244,23 +235,10 @@ class Apu implements Writable {
             this.frameClockCounter = 0;
         }
 
-        // Quarter frame adjust the volume envelope
-        if (quarterFrameClock) {
-            this.pulse1.quarterFrameClock();
-            this.pulse2.quarterFrameClock();
-        }
-
-        // Half frame adjust the note length and freq sweepers
-        if (halfFrameClock) {
-            this.pulse1.halfFrameClock();
-            this.pulse2.halfFrameClock();
-        }
-
         this.triangle.clock(quarterFrameClock, halfFrameClock);
         this.noise.clock(quarterFrameClock, halfFrameClock);
-        // TODO only clock and pass flags
-        this.pulse1.clock();
-        this.pulse2.clock();
+        this.pulse1.clock(quarterFrameClock, halfFrameClock);
+        this.pulse2.clock(quarterFrameClock, halfFrameClock);
     }
 }
 

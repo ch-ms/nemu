@@ -1,122 +1,136 @@
-import {PulseWaveOscillator} from './pulse-wave-oscillator';
+import {Constants} from './constants';
 import {Uint8, Bit, Uint16, Numbers} from './numbers';
-import {Timings} from './nes';
 
-type DutyCycle = 0.125 | 0.25 | 0.5 | 0.75;
+export type DutyCycleIndex = 0 | 1 | 2 | 3;
 
-const enum Constants {
-    MAX_VOLUME = 0b1111
+export const enum DutyCycle {
+    TWELVE_AND_HALF = 0.125,
+    TWENTY_FIVE = 0.25,
+    FIFTY = 0.5,
+    SEVENTY_FIVE = 0.75
 }
 
-// TODO if I changed period it only applies when sequencer timer equal zero
+const enum DutyCycleShifter {
+    TWELVE_AND_HALF = 0b00000001,
+    TWENTY_FIVE = 0b00000011,
+    FIFTY = 0b00001111,
+    SEVENTY_FIVE = 0b11111100
+}
 
-class PulseChannel {
+const DUTY_CYCLE_LOOKUP: [DutyCycle, DutyCycle, DutyCycle, DutyCycle] = [
+    DutyCycle.TWELVE_AND_HALF, DutyCycle.TWENTY_FIVE, DutyCycle.FIFTY, DutyCycle.SEVENTY_FIVE
+];
+
+const DUTY_CYCLE_SHIFTER_LOOKUP: [DutyCycleShifter, DutyCycleShifter, DutyCycleShifter, DutyCycleShifter] = [
+    DutyCycleShifter.TWELVE_AND_HALF, DutyCycleShifter.TWENTY_FIVE, DutyCycleShifter.FIFTY, DutyCycleShifter.SEVENTY_FIVE
+];
+
+// TODO if I changed period it only applies when sequencer timer equal zero
+// TODO outside interface
+export class PulseChannel {
+    outputVolume = 0;
+
     // Duty cycle of the pulse wave
-    public duty: DutyCycle = 0.5;
+    duty: DutyCycle = DutyCycle.FIFTY;
+    private dutyShifter: DutyCycleShifter = DutyCycleShifter.FIFTY;
 
     // Period of the pulse wave, translated to the output frequency
-    public period: Uint16 = 0;
+    period: Uint16 = 0;
+    private timer: Uint16 = 0;
 
     // Length counter
-    public halt: Bit = 0; /* Halts length count */
-    public enable: Bit = 0;
-    public length: Uint8 = 0;
+    halt: Bit = 0; /* Halts length count */
+    enable: Bit = 0;
+    length: Uint8 = 0;
 
     // Volume envelope
-    public volume: Uint8 = 0;
-    public envelopeLoop: Bit = 0;
-    public envelopeDisable: Bit = 0;
-    public envelopeResetNextClock = false;
+    volume: Uint8 = 0;
+    envelopeLoop: Bit = 0;
+    envelopeDisable: Bit = 0;
+    envelopeResetNextClock = false;
     private envelopeCounter = 0;
     private envelopeDivider = 0;
 
     // Sweep unit
-    public sweepEnable: Bit = 0;
-    public sweepPeriod: Uint8 = 0;
-    public sweepNegate: Bit = 0;
-    public sweepShift: Uint8 = 0;
-    public sweepResetNextClock = false;
+    sweepEnable: Bit = 0;
+    sweepPeriod: Uint8 = 0;
+    sweepNegate: Bit = 0;
+    sweepShift: Uint8 = 0;
+    sweepResetNextClock = false;
     private sweepDivider = 0;
     private sweepNextPeriod: Uint16 = 0;
-    private sweepMute = false;
+    sweepMute = false;
 
-    constructor(
-        private readonly output?: PulseWaveOscillator,
-        private readonly channelNumber: Bit = 0
-    ) {
+    constructor(private readonly channelNumber: Bit = 0) {
+        this.setDuty(2);
     }
 
-    quarterFrameClock(): void {
-        // Adjust envelope
-        if (this.envelopeResetNextClock) {
-            this.envelopeResetNextClock = false;
-            this.envelopeCounter = 15;
-            this.envelopeDivider = this.volume;
-        } else if (this.envelopeDivider === 0) {
-            this.envelopeDivider = this.volume;
-
-            if (this.envelopeLoop && this.envelopeCounter === 0) {
-                this.envelopeCounter = 15;
-            } else if (this.envelopeCounter !== 0) {
-                this.envelopeCounter--;
-            }
-        } else {
-            this.envelopeDivider--;
-        }
-
-        if (this.output) {
-            this.output.volume.gain.value =
-                (this.envelopeDisable ? this.volume : this.envelopeCounter) / Constants.MAX_VOLUME;
-        }
+    setDuty(i: DutyCycleIndex): void {
+        this.duty = DUTY_CYCLE_LOOKUP[i];
+        this.dutyShifter = DUTY_CYCLE_SHIFTER_LOOKUP[i];
     }
 
-    halfFrameClock(): void {
-        // Adjust note length
-        if (this.length !== 0 && !this.halt) {
-            this.length--;
-        }
-
-        // Adjust sweeper
-        if (
-            this.sweepEnable &&
-            this.sweepDivider === 0 &&
-            // If the shift count is zero, the channel's period is never updated, but muting logic still applies.
-            this.sweepShift !== 0 &&
-            !this.sweepMute
-        ) {
-            this.period = this.sweepNextPeriod;
-            // Whenever the current period changes for any reason,
-            // whether by $400x writes or by sweep, the target period also changes.
-            this.updateSweepNextPeriodAndMuteFlag();
-        }
-
-        // If the divider's counter is zero or the reload flag is true:
-        //   The counter is set to P and the reload flag is cleared.
-        //   Otherwise, the counter is decremented.
-        if (this.sweepDivider === 0 || this.sweepResetNextClock) {
-            this.sweepResetNextClock = false;
-            this.sweepDivider = this.sweepPeriod + 1;
-        } else {
-            this.sweepDivider--;
-        }
-    }
-
-    preClock(): void {
+    clock(quarterFrame: boolean, halfFrame: boolean): void {
         this.updateSweepNextPeriodAndMuteFlag();
-    }
 
-    clock(): void {
-        // Set output values
-        if (!this.output) {
-            return;
+        if (quarterFrame) {
+            // Adjust envelope
+            if (this.envelopeResetNextClock) {
+                this.envelopeResetNextClock = false;
+                this.envelopeCounter = 15;
+                this.envelopeDivider = this.volume;
+            } else if (this.envelopeDivider === 0) {
+                this.envelopeDivider = this.volume;
+
+                if (this.envelopeLoop && this.envelopeCounter === 0) {
+                    this.envelopeCounter = 15;
+                } else if (this.envelopeCounter !== 0) {
+                    this.envelopeCounter--;
+                }
+            } else {
+                this.envelopeDivider--;
+            }
+
+            this.outputVolume = this.envelopeDisable ? this.volume : this.envelopeCounter;
         }
 
-        if (this.length === 0 || this.sweepMute) {
-            this.output.stop();
+        if (halfFrame) {
+            // Adjust note length
+            if (this.length !== 0 && !this.halt) {
+                this.length--;
+            }
+
+            // Adjust sweeper
+            if (
+                this.sweepEnable &&
+                this.sweepDivider === 0 &&
+                // If the shift count is zero, the channel's period is never updated, but muting logic still applies.
+                this.sweepShift !== 0 &&
+                !this.sweepMute
+            ) {
+                this.period = this.sweepNextPeriod;
+                // Whenever the current period changes for any reason,
+                // whether by $400x writes or by sweep, the target period also changes.
+                this.updateSweepNextPeriodAndMuteFlag();
+            }
+
+            // If the divider's counter is zero or the reload flag is true:
+            //   The counter is set to P and the reload flag is cleared.
+            //   Otherwise, the counter is decremented.
+            if (this.sweepDivider === 0 || this.sweepResetNextClock) {
+                this.sweepResetNextClock = false;
+                this.sweepDivider = this.sweepPeriod + 1;
+            } else {
+                this.sweepDivider--;
+            }
+        }
+
+        if (this.timer) {
+            this.timer--;
         } else {
-            const frequency = Timings.CPU_CLOCK_HZ / (16 * (this.period + 1));
-            this.output.setFrequencyAndDutyCycle(Math.min(Math.max(-22050, frequency), 22050), this.duty);
-            this.output.start();
+            this.timer = this.period;
+            // Rotate right 1 bit
+            this.dutyShifter = ((this.dutyShifter & Constants.BIT_1) << 7) | (this.dutyShifter >>> 1);
         }
     }
 
@@ -138,5 +152,3 @@ class PulseChannel {
         this.sweepMute = this.period < 8 || this.sweepNextPeriod > 0x7ff;
     }
 }
-
-export {DutyCycle, PulseChannel};

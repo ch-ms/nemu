@@ -1,12 +1,11 @@
 import {Uint16, Uint8, Bit} from './numbers';
-import {Timings} from './nes';
-import {AudioGraph} from './audio-graph'
 
 class TriangleChannel {
     enable: Bit = 0;
+    output: number = 0;
 
     // Translated to frequency
-    timer: Uint16 = 0;
+    period: Uint16 = 0;
 
     // control bit also act as a length counter halt
     control: Bit = 0;
@@ -15,14 +14,13 @@ class TriangleChannel {
 
     linearCounterReload: Uint8 = 0;
     linearCounterReloadFlag = false;
-    private linearCounter = 0;
+    linearCounter = 0;
 
     private frequency = 0;
-
-    constructor(
-        private readonly graph?: AudioGraph
-    ) {
-    }
+    private timer = 0;
+    private sampleIndex = 0;
+    private sampleDirection = -1;
+    private sampleCounter = 15;
 
     clock(quarterFrame: boolean, halfFrame: boolean): void {
         if (quarterFrame) {
@@ -43,22 +41,23 @@ class TriangleChannel {
             }
         }
 
-        // Set output values
-        if (!this.graph) {
-            return;
-        }
-
-        // this.timer > 2 halts channel at ultrasonic values
-        if (this.lengthCounter && this.linearCounter && this.timer > 2) {
-            const frequency = Timings.CPU_CLOCK_HZ / (32 * (this.timer + 1));
-            if (this.frequency !== frequency) {
-                this.frequency = frequency;
-                this.graph.triangle.frequency.value = frequency;
-            }
-
-            this.graph.toggleTriangle(true);
+        if (this.timer) {
+            this.timer--;
         } else {
-            this.graph.toggleTriangle(false);
+            this.timer = this.period;
+            this.output = this.sampleCounter;
+
+            this.sampleCounter += this.sampleDirection;
+
+            // TODO maybe array look up would perform better?
+            // Sample cycle like this 15 .. 0, 0 .. 15
+            if (this.sampleCounter < 0) {
+                this.sampleCounter = 0;
+                this.sampleDirection = 1;
+            } else if (this.sampleCounter > 15) {
+                this.sampleCounter = 15;
+                this.sampleDirection = -1;
+            }
         }
     }
 }
