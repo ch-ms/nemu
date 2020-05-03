@@ -880,7 +880,7 @@ class Cpu {
      * Logical & on A and Memory
      * Z = A == 0, N = A < 0, A = A & M
      */
-    instructionAND= (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
+    instructionAND = (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
         const data = this.read(addr);
         this._a = this._a & data;
         this.setZeroAndNegativeByValue(this._a);
@@ -891,7 +891,7 @@ class Cpu {
      * Logical | on A and Memory
      * Z = A == 0, N = A < 0, A = A | M
      */
-    instructionORA= (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
+    instructionORA = (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
         this._a |= this.read(addr);
         this.setZeroAndNegativeByValue(this._a);
         return 1;
@@ -901,7 +901,7 @@ class Cpu {
      * Logical ^ on A and Memory
      * A = A ^ M, Z = A == 0, N = A < 0
      */
-    instructionEOR= (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
+    instructionEOR = (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
         const data = this.read(addr);
         this._a = this._a ^ data;
         this.setZeroAndNegativeByValue(this._a);
@@ -912,14 +912,14 @@ class Cpu {
      * Jump to subroutine.
      * Pushes the addr of the return point to the stack. Set program counter to given addr.
      */
-    instructionJSR= (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
+    instructionJSR = (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
         this._programCounter = (this._programCounter - 1) & Numbers.UINT16_CAST;
         this.pushProgramCounterToStack();
         this._programCounter = addr;
         return 0;
     }
 
-    instructionJMP= (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
+    instructionJMP = (entry: OpcodeResolverEntry, addr: Uint16): AdditionalCycleFlag => {
         this._programCounter = addr;
         return 0;
     }

@@ -562,13 +562,14 @@ class Ppu implements Device {
             }
         }
 
-        // Step: send pixel to the screen interface
+        // Step: send pixel to the frame buffer
         if (
             this.cycle < PpuConstants.VISIBLE_SCANLINE_END_CYCLE &&
             this.scanline < PpuConstants.FRAME_VISIBLE_SCANLINES
         ) {
             const color = PPU_PALETTE[this.ppuRead(PpuConstants.PALETTE_START_ADDR + (palette * 4) + pixel) & 0x3F];
             // frameBuffer.width is slow, so we use width it created with to compute index
+            // TODO can precompute index with scanline
             const index = (this.scanline * PpuConstants.VISIBLE_SCANLINE_END_CYCLE + this.cycle) * 4;
             this.frameBuffer.data[index] = color[0];
             this.frameBuffer.data[index + 1] = color[1];
