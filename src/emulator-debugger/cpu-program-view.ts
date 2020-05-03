@@ -1,6 +1,6 @@
 import {Cpu} from '../cpu';
 import {Bus} from '../interfaces';
-import {LOOKUP} from '../lookup';
+import {OPCODE_LOOKUP} from '../opcode-resolver';
 import {uint8ToHex, iterateRam} from '../utils/utils';
 
 // TODO make real disassembler
@@ -13,7 +13,7 @@ class CpuProgramView {
         for (const addr of iterateRam(startAddr, startAddr + 15)) {
             const byte = bus.read(addr);
             if (addr === startAddr) {
-                const [instructionMnemonic, addrModeMnemonic] = LOOKUP[byte];
+                const [instructionMnemonic, addrModeMnemonic] = OPCODE_LOOKUP[byte];
                 result.push(`${instructionMnemonic} (${addrModeMnemonic})`);
             } else {
                 result.push(uint8ToHex(byte));

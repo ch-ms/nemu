@@ -1,3 +1,4 @@
+import './image-data-polyfill';
 const fs = require('fs');
 import {parseCartridge} from '../src/cartridge-parser';
 import {Cartridge} from '../src/cartridge';

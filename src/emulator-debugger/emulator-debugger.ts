@@ -11,7 +11,6 @@ import {MemoryView} from './memory-view';
 import {PatternView} from './pattern-view';
 import {NametableView} from './nametable-view';
 import {OamView} from './oam-view';
-import {Color} from '../color';
 import {Uint8, Numbers} from '../numbers';
 
 import * as nestestJson from '../../data/nestest.nes.json';
@@ -112,24 +111,14 @@ class EmulatorDebuggerUI {
     private createScreenInterface(): ScreenInterface {
         const canvas = this.container.querySelector('#canvas') as HTMLCanvasElement;
         const ctx = canvas.getContext('2d');
-        const {width, height} = canvas;
 
         if (!ctx) {
             throw new Error('Error while receiving context from canvas');
         }
 
-        const imageData = ctx.createImageData(width, height);
         return {
-            setPixel: (x: number, y: number, color: Color): void => {
-                const index = (y * width + x) * 4;
-                imageData.data[index] = color[0];
-                imageData.data[index + 1] = color[1];
-                imageData.data[index + 2] = color[2];
-                imageData.data[index + 3] = 255;
-            },
-
-            frameCompleted: (): void => {
-                ctx.putImageData(imageData, 0, 0);
+            frameCompleted: (frameBuffer: ImageData): void => {
+                ctx.putImageData(frameBuffer, 0, 0);
                 this.render();
             }
         };

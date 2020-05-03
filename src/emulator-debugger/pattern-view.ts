@@ -1,5 +1,5 @@
 import {Ppu, PpuConstants} from '../ppu';
-import {ppuPalette} from '../ppu-palette';
+import {PPU_PALETTE} from '../ppu-palette';
 import {Color} from '../color';
 
 class PatternView {
@@ -48,7 +48,7 @@ class PatternView {
     }
 
     private getColorFromPalette(ppu: Ppu, palette: number, pixel: number): Color {
-        return ppuPalette[ppu.ppuRead(PpuConstants.PALETTE_START_ADDR + (palette * 4) + pixel) & 0x3F];
+        return PPU_PALETTE[ppu.ppuRead(PpuConstants.PALETTE_START_ADDR + (palette * 4) + pixel) & 0x3F];
     }
 }
 

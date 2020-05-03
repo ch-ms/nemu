@@ -7,6 +7,7 @@ import {AudioClock} from './audio-clock';
 import {RafClock} from './raf-clock';
 import {Cartridge, CartridgeState} from './cartridge';
 import {ControllerInterface} from './controller';
+import {Bit} from './numbers';
 
 /*
  * Main NES class
@@ -46,8 +47,9 @@ class Nes {
     readonly clock: Clock;
 
     private cycle = 0;
+    private cpuWillBeClocked = true;
 
-    private oamDmaInitialized = false;
+    private oamDmaInitialized: Bit = 0;
 
     constructor(
         private readonly cartridge: Cartridge,
@@ -132,14 +134,15 @@ class Nes {
         if (this.cpuWillBeClocked) {
             // TODO Cpu & Ppu sync state here mb we can incapsulate it better
             if (this.bus.isOamDmaTransfer) {
+                const isOdd = (this.cycle & 1) as Bit;
                 if (!this.oamDmaInitialized) {
                     // We need to wait odd cycle to start oam dma
-                    this.oamDmaInitialized = this.cycle % 2 === 1;
-                } else if (this.cycle % 2 === 1) {
+                    this.oamDmaInitialized = isOdd;
+                } else if (isOdd) {
                     // On odd clock we write
-                    this.ppu.writeOam(this.bus.getOamDmaOffset(), this.bus.getOamDmaByte());
+                    this.ppu.oam[this.bus.getOamDmaOffset()] = this.bus.getOamDmaByte();
                     if (!this.bus.progressOamDmaTransfer()) {
-                        this.oamDmaInitialized = false;
+                        this.oamDmaInitialized = 0;
                     }
                 }
             } else {
@@ -147,16 +150,13 @@ class Nes {
             }
         }
 
-        if (this.ppu.isNmiRequested) {
+        if (this.ppu.nmiRequestFlag) {
             this.cpu.nmi();
-            this.ppu.clearNmiFlag();
+            this.ppu.nmiRequestFlag = false;
         }
 
         this.cycle++;
-    }
-
-    private get cpuWillBeClocked(): boolean {
-        return this.cycle % Timings.CPU_CLOCK_PER_PPU_CLOCK === 0;
+        this.cpuWillBeClocked = this.cycle % Timings.CPU_CLOCK_PER_PPU_CLOCK === 0;
     }
 
     static fromSerializedState(state: NesState, options: Options = {}): Nes {

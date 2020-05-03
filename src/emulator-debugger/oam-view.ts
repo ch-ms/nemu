@@ -10,10 +10,10 @@ class OamView {
         const content = [];
         for (let i = 0; i < oamObjectsCount; i++) {
             const index = i * 4;
-            const y = ppu.readOam(index);
-            const id = ppu.readOam(index + 1);
-            const attr = ppu.readOam(index + 2);
-            const x = ppu.readOam(index + 3);
+            const y = ppu.oam[index];
+            const id = ppu.oam[index + 1];
+            const attr = ppu.oam[index + 2];
+            const x = ppu.oam[index + 3];
             content.push(`(${x}, ${y}) id:${uint8ToHex(id)} a:${uint8ToHex(attr)}`);
         }
 

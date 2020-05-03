@@ -4,7 +4,7 @@ import {PulseChannel, DutyCycleIndex} from './pulse-channel';
 import {TriangleChannel} from './triangle-channel';
 import {NoiseChannel} from './noise-channel';
 import {Constants} from './constants';
-import {Numbers} from './numbers';
+import {Numbers, Bit} from './numbers';
 
 // https://wiki.nesdev.com/w/index.php/APU_registers
 export const enum ApuConstants {
@@ -174,7 +174,7 @@ class Apu implements Writable {
                 // TODO clear DMC IRQ flag
                 // TODO enable dmc channel
                 // TODO If d is set and the DMC's DMA reader has no more sample bytes to fetch, the DMC sample is restarted. If d is clear then the DMA reader's sample bytes remaining is set to 0.
-                this.pulse1.enable = (data & 0b1) && 1;
+                this.pulse1.enable = (data & 0b1) as Bit;
                 // When the enabled bit is cleared (via $4015),
                 // the length counter is forced to 0 and cannot be changed until
                 // enabled is set again (the length counter's previous value is lost).

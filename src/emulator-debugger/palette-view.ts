@@ -1,5 +1,5 @@
 import {Ppu, PpuConstants} from '../ppu';
-import {ppuPalette} from '../ppu-palette';
+import {PPU_PALETTE} from '../ppu-palette';
 import {ColorQuad, stringifyColor} from '../color';
 
 class PaletteEntry {
@@ -50,10 +50,10 @@ class PaletteView {
         for (let palette = 0; palette < 8; palette++) {
             const addr = PpuConstants.PALETTE_START_ADDR + palette * 4;
             const colors: ColorQuad = [
-                ppuPalette[ppu.ppuRead(addr + 0)],
-                ppuPalette[ppu.ppuRead(addr + 1)],
-                ppuPalette[ppu.ppuRead(addr + 2)],
-                ppuPalette[ppu.ppuRead(addr + 3)],
+                PPU_PALETTE[ppu.ppuRead(addr + 0)],
+                PPU_PALETTE[ppu.ppuRead(addr + 1)],
+                PPU_PALETTE[ppu.ppuRead(addr + 2)],
+                PPU_PALETTE[ppu.ppuRead(addr + 3)],
             ];
             this.paletteEntries[palette].render(colors);
         }

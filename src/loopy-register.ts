@@ -19,7 +19,7 @@ const enum Fields {
 
 /**
  * Loopy register is used to maintain PPU state
- * https://wiki.nesdev.com/w/index.php/PPU_scrolling
+ * @see {@link https://wiki.nesdev.com/w/index.php/PPU_scrolling}
  */
 class LoopyRegister {
     public value: Uint16 = 0;
@@ -60,6 +60,34 @@ class LoopyRegister {
         this.value = (this.value & ~Fields.COARSE_Y) | (source.value & Fields.COARSE_Y);
         this.value = (this.value & ~Fields.FINE_Y) | (source.value & Fields.FINE_Y);
     }
+
+    incrementScrollX(): void {
+        if (this.coarseX === 31) {
+            this.setCoarseX(0);
+            this.flipNametableX();
+        } else {
+            this.setCoarseX(this.coarseX + 1);
+        }
+    }
+
+    incrementScrollY(): void {
+        if (this.fineY < 7) {
+            this.setFineY(this.fineY + 1);
+        } else {
+            this.setFineY(0);
+
+            if (this.coarseY === 29) {
+                this.setCoarseY(0);
+                this.flipNametableY();
+            } else if (this.coarseY === 31) {
+                this.setCoarseY(0);
+            } else {
+                this.setCoarseY(this.coarseY + 1);
+            }
+        }
+    }
+
+    // Getters actually perform better than precomputed values for background rendering pipeline
 
     get tileId(): Uint16 {
         return this.value & (Fields.COARSE_X | Fields.COARSE_Y | Fields.NAMETABLE);

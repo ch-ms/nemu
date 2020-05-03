@@ -1,7 +1,5 @@
-/*
- * Lookup table for instructions and their addressing modes and cycles
- * See: http://www.oxyron.de/html/opcodes02.html
- */
+import {Uint8} from './numbers';
+import {Cpu, InstructionFunction, AddrModeFunction} from './cpu';
 
 type LegalInstructionMnemonic = 'BRK' | 'SED' | 'ORA' | 'NOP' | 'ASL' | 'PHP' | 'BPL' |
     'CLC' | 'JSR' | 'AND' | 'BIT' | 'ROL' | 'PLP' | 'BMI' |
@@ -16,15 +14,19 @@ type IllegalInstructionMnemonic = 'LAX' | 'SAX' | 'DCP' | 'ISC' | 'SLO' | 'RLA' 
     'SRE' | 'RRA' | 'ALR' | 'ANC' | 'STP' | 'AXS' | 'LAS' |
     'ARR' | 'XAA' | 'AHX' | 'TAS' | 'SHX';
 
-type InstructionMnemonic = LegalInstructionMnemonic | IllegalInstructionMnemonic;
-
-type AddrModeMnemonic = 'IMM' | 'IZX' | 'IMP' | 'ZP0' | 'ABS' | 'REL' | 'IZY' |
+export type AddrModeMnemonic = 'IMM' | 'IZX' | 'IMP' | 'ZP0' | 'ABS' | 'REL' | 'IZY' |
     'ZPX' | 'ABY' | 'ABX' | 'IND' | 'ZPY';
 
-type LookupEntry = [InstructionMnemonic, AddrModeMnemonic, number];
+type InstructionMnemonic = LegalInstructionMnemonic | IllegalInstructionMnemonic;
+type Cycles = number;
+type OpcodeLookupEntry = [InstructionMnemonic, AddrModeMnemonic, Cycles];
 
+/**
+ * Lookup table for instructions and their addressing modes and cycles
+ * See: http://www.oxyron.de/html/opcodes02.html
+ */
 // This is 16x16 matrix, but rows are oganized in 4x4 matrix for convinience of reading
-const LOOKUP: LookupEntry[] = [
+export const OPCODE_LOOKUP: OpcodeLookupEntry[] = [
     ['BRK', 'IMM', 7],['ORA', 'IZX', 6],['STP', 'IMP', 2],['SLO', 'IZX', 8],
     ['NOP', 'ZP0', 3],['ORA', 'ZP0', 3],['ASL', 'ZP0', 5],['SLO', 'ZP0', 5],
     ['PHP', 'IMP', 3],['ORA', 'IMM', 2],['ASL', 'IMP', 2],['ANC', 'IMM', 2],
@@ -113,4 +115,113 @@ const LOOKUP: LookupEntry[] = [
     ['NOP', 'ABX', 4],['SBC', 'ABX', 4],['INC', 'ABX', 7],['ISC', 'ABX', 7]
 ];
 
-export {LOOKUP, InstructionMnemonic, AddrModeMnemonic};
+type Opcode = Uint8;
+export type OpcodeResolverEntry = [Opcode, InstructionMnemonic, AddrModeMnemonic, Cycles, InstructionFunction, AddrModeFunction];
+export type OpcodeResolver = OpcodeResolverEntry[];
+
+/**
+ * Creates array to resolve opcodes
+ */
+export function createOpcodeResolver(cpu: Cpu): OpcodeResolver {
+    const instructionLookup: Record<InstructionMnemonic, InstructionFunction> = {
+        'LDA': cpu.instructionLDA,
+        'LDX': cpu.instructionLDX,
+        'LDY': cpu.instructionLDY,
+        'STA': cpu.instructionSTA,
+        'STX': cpu.instructionSTX,
+        'STY': cpu.instructionSTY,
+        'CLC': cpu.instructionCLC,
+        'SEC': cpu.instructionSEC,
+        'CLD': cpu.instructionCLD,
+        'SED': cpu.instructionSED,
+        'CLI': cpu.instructionCLI,
+        'SEI': cpu.instructionSEI,
+        'CLV': cpu.instructionCLV,
+        'ADC': cpu.instructionADC,
+        'SBC': cpu.instructionSBC,
+        'DEY': cpu.instructionDEY,
+        'INY': cpu.instructionINY,
+        'DEX': cpu.instructionDEX,
+        'INX': cpu.instructionINX,
+        'INC': cpu.instructionINC,
+        'DEC': cpu.instructionDEC,
+        'BCC': cpu.instructionBCC,
+        'BCS': cpu.instructionBCS,
+        'BEQ': cpu.instructionBEQ,
+        'BMI': cpu.instructionBMI,
+        'BNE': cpu.instructionBNE,
+        'BPL': cpu.instructionBPL,
+        'BVC': cpu.instructionBVC,
+        'BVS': cpu.instructionBVS,
+        'NOP': cpu.instructionNOP,
+        'BRK': cpu.instructionBRK,
+        'TYA': cpu.instructionTYA,
+        'TAY': cpu.instructionTAY,
+        'TXS': cpu.instructionTXS,
+        'TXA': cpu.instructionTXA,
+        'TAX': cpu.instructionTAX,
+        'TSX': cpu.instructionTSX,
+        'BIT': cpu.instructionBIT,
+        'CMP': cpu.instructionPseudoCMX,
+        'CPX': cpu.instructionPseudoCMX,
+        'CPY': cpu.instructionPseudoCMX,
+        'AND': cpu.instructionAND,
+        'ORA': cpu.instructionORA,
+        'EOR': cpu.instructionEOR,
+        'JSR': cpu.instructionJSR,
+        'JMP': cpu.instructionJMP,
+        'RTS': cpu.instructionRTS,
+        'PHA': cpu.instructionPHA,
+        'PHP': cpu.instructionPHP,
+        'PLA': cpu.instructionPLA,
+        'PLP': cpu.instructionPLP,
+        'LSR': cpu.instructionLSR,
+        'ROL': cpu.instructionROL,
+        'ROR': cpu.instructionROR,
+        'ASL': cpu.instructionASL,
+        'RTI': cpu.instructionRTI,
+        'LAX': cpu.instructionIllegalLAX,
+        'SAX': cpu.instructionIllegalSAX,
+        'DCP': cpu.instructionIllegalDCP,
+        'ISC': cpu.instructionIllegalISC,
+        'SLO': cpu.instructionIllegalSLO,
+        'RLA': cpu.instructionIllegalRLA,
+        'SRE': cpu.instructionIllegalSRE,
+        'RRA': cpu.instructionIllegalRRA,
+        'ALR': cpu.instructionIllegalALR,
+        'ANC': cpu.instructionIllegalANC,
+        'XAA': cpu.instructionIllegal,
+        'LAS': cpu.instructionIllegal,
+        'STP': cpu.instructionIllegal,
+        'AXS': cpu.instructionIllegal,
+        'ARR': cpu.instructionIllegal,
+        'AHX': cpu.instructionIllegal,
+        'TAS': cpu.instructionIllegal,
+        'SHX': cpu.instructionIllegal
+    };
+
+    const addrModeLookup: Record<AddrModeMnemonic, AddrModeFunction> = {
+        'IMM': cpu.addrModeIMM,
+        'ABS': cpu.addrModeABS,
+        'ABX': cpu.addrModeABX,
+        'ABY': cpu.addrModeABY,
+        'ZP0': cpu.addrModeZP0,
+        'ZPX': cpu.addrModeZPX,
+        'ZPY': cpu.addrModeZPY,
+        'IMP': cpu.addrModeIMP,
+        'REL': cpu.addrModeREL,
+        'IZY': cpu.addrModeIZY,
+        'IZX': cpu.addrModeIZX,
+        'IND': cpu.addrModeIND
+    };
+
+    const resolver: OpcodeResolver = [];
+    for (let opcode = 0; opcode < OPCODE_LOOKUP.length; opcode++) {
+        const [instructionMnemonic, addrModeMnemonic, cycles] = OPCODE_LOOKUP[opcode];
+        const instructionFunction = instructionLookup[instructionMnemonic];
+        const addrModeFunction = addrModeLookup[addrModeMnemonic];
+        resolver.push([opcode, instructionMnemonic, addrModeMnemonic, cycles, instructionFunction, addrModeFunction]);
+    }
+
+    return resolver;
+}

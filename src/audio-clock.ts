@@ -47,12 +47,25 @@ function samplePulseWave(time: number, frequency: number, duty: DutyCycle): numb
     return TWO_OVER_PI * (a - b);
 }
 
+// Precompute bunch of coefficients for sampleTriangleWave
+const [SAMPLE_TRIANGLE_N_LOOKUP, SAMPLE_TRIANGLE_C_LOOKUP] = (function(): [number[], number[]] {
+    const n = [];
+    const c = [];
+
+    for (let i = 0; i < AudioClockConstants.TRIANGLE_HARMONICS; i++) {
+        const a = 2 * i + 1;
+        n.push(a);
+        c.push(((-1) ** i) * (a ** -2));
+    }
+
+    return [n, c];
+})();
+
 function sampleTriangleWave(time: number, frequency: number): number {
     let output = 0;
-    const a = TWO_PI * frequency;
+    const a = TWO_PI * frequency * time;
     for (let i = 0; i < AudioClockConstants.TRIANGLE_HARMONICS; i++) {
-        const n = 2 * i + 1;
-        output += ((-1) ** i) * (n ** -2) * approxSin(a * n * time);
+        output += SAMPLE_TRIANGLE_C_LOOKUP[i] * approxSin(a * SAMPLE_TRIANGLE_N_LOOKUP[i]);
     }
 
     return EIGHT_OVER_PI_2 * output;
