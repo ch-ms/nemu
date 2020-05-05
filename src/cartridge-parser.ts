@@ -11,7 +11,8 @@ interface CartridgeHeader {
 interface BaseCartridgeData<T> {
     header: CartridgeHeader;
     prgRom: T;
-    chrRom: T;
+    /* chr can be rom or ram, so chrData is a good name */
+    chrData: T;
 }
 
 type CartridgeData = BaseCartridgeData<Uint8Array>;
@@ -72,6 +73,11 @@ function parsePrgRom(data: Uint8Array, header: CartridgeHeader): Uint8Array {
 }
 
 function parseChrRom(data: Uint8Array, header: CartridgeHeader): Uint8Array {
+    // 0 means board uses chr ram, so allocate it
+    if (header.chrSize8K === 0) {
+        return new Uint8Array(CartridgeConstants.CHR_BANK_SIZE);
+    }
+
     const offset = getChrRomOffset(header);
     return data.slice(offset, offset + CartridgeConstants.CHR_BANK_SIZE * header.chrSize8K);
 }
@@ -81,16 +87,16 @@ function parseCartridge(buffer: ArrayBuffer): CartridgeData {
     const data = new Uint8Array(buffer);
     const header = parseHeader(data);
     const prgRom = parsePrgRom(data, header);
-    const chrRom = parseChrRom(data, header);
+    const chrData = parseChrRom(data, header);
 
-    return {header, prgRom, chrRom};
+    return {header, prgRom, chrData};
 }
 
 function serializeCartridgeData(data: CartridgeData): SerializedCartridgeData {
     return {
         header: {...data.header},
         prgRom: Array.from(data.prgRom.values()),
-        chrRom: Array.from(data.chrRom.values())
+        chrData: Array.from(data.chrData.values())
     };
 }
 
@@ -98,7 +104,7 @@ function deserializeCartridgeData(serialized: SerializedCartridgeData): Cartridg
     return {
         header: {...serialized.header},
         prgRom: Uint8Array.from(serialized.prgRom),
-        chrRom: Uint8Array.from(serialized.chrRom)
+        chrData: Uint8Array.from(serialized.chrData)
     }
 }
 

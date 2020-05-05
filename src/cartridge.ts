@@ -9,14 +9,15 @@ import {
     deserializeCartridgeData
 } from './cartridge-parser';
 
-/**
- * Cartridge contains game data
- */
 
 export interface CartridgeState {
     cartridgeData: Readonly<SerializedCartridgeData>;
 }
 
+// TODO RF mb merge with cartridge parser?
+/**
+ * Game cartridge
+ */
 class Cartridge implements Device {
     private readonly mapper: Mapper;
 
@@ -24,23 +25,22 @@ class Cartridge implements Device {
 
     constructor(private readonly cartridgeData: Readonly<CartridgeData>) {
         this.mapper = createMapper(cartridgeData.header);
-
         this.mirroringMode = this.cartridgeData.header.mirroring;
     }
 
+    // TODO RF mb read & write for cpu & ppu separately?
+    // It will present logic more obviously than addresses
     read(addr: Uint16): Uint8 {
-        const mappedAddr = this.mapper.map(addr);
-
-        if (mappedAddr >= 0x0 && mappedAddr < 0x2000) {
-            return this.cartridgeData.chrRom[mappedAddr];
-        } else if (mappedAddr >= 0x4020 && mappedAddr < 0x6000) {
+        if (/* addr >= 0 && */ addr < 0x2000) {
+            return this.cartridgeData.chrData[this.mapper.map(addr)];
+        } else if (addr >= 0x4020 && addr < 0x6000) {
             // TODO read from Expansion ROM
             return 0;
-        } else if (mappedAddr >= 0x6000 && mappedAddr < 0x8000) {
-            return 0;
+        } else if (/* addr >= 0x6000 && */ addr < 0x8000) {
             // TODO read from SRAM
-        } else if (mappedAddr >= 0x8000 && mappedAddr < 0x10000) {
-            return this.cartridgeData.prgRom[mappedAddr - 0x8000];
+            return 0;
+        } else if (/* addr >= 0x8000 && */ addr < 0x10000) {
+            return this.cartridgeData.prgRom[this.mapper.map(addr) - 0x8000];
         }
 
         throw new Error(`Can't read from addr "${addr}"`);
@@ -48,17 +48,14 @@ class Cartridge implements Device {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     write(addr: Uint16, data: Uint8): void {
-        const mappedAddr = this.mapper.map(addr);
-
-        // TODO do we need to write anything?
-        if (mappedAddr >= 0x0 && mappedAddr < 0x2000) {
-            // TODO write to CHR
-        } else if (mappedAddr >= 0x4020 && mappedAddr < 0x6000) {
+        if (/* addr >= 0x0 && */ addr < 0x2000) {
+            this.cartridgeData.chrData[this.mapper.map(addr)] = data;
+        } else if (addr >= 0x4020 && addr < 0x6000) {
             // TODO write to Expansion ROM
-        } else if (mappedAddr >= 0x6000 && mappedAddr < 0x8000) {
+        } else if (/* addr >= 0x6000 && */ addr < 0x8000) {
             // TODO write to SRAM
-        } else if (mappedAddr >= 0x8000 && mappedAddr < 0x10000) {
-            // TODO write to PRG
+        } else if (/* addr >= 0x8000 && */ addr < 0x10000) {
+            this.mapper.write(addr, data);
         } else {
             throw new Error(`Can't write to addr "${addr}"`);
         }

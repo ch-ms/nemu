@@ -21,6 +21,7 @@ export const enum ApuConstants {
     TRIANGLE_FREQUENCY_1 = 0x400a,
     TRIANGLE_FREQUENCY_2 = 0x400b,
     NOISE_CONTROL_1 = 0x400c,
+    UNUSED = 0x400d,
 
     NOISE_FREQUENCY_1 = 0x400e,
     NOISE_FREQUENCY_2 = 0x400f,
@@ -50,6 +51,7 @@ const NOISE_PERIOD_LOOKUP = [
  * Nes Audio Processing Unit
  */
 // TODO Except for the status register, all other registers are write-only. The "value of the register" refers to the last value written to the register.
+// TODO Where is a bug somewhere in a sweep unit (I think), check pulse test rom (sub.nes)
 class Apu implements Writable {
     readonly pulse1: PulseChannel;
     readonly pulse2: PulseChannel;
@@ -60,7 +62,7 @@ class Apu implements Writable {
 
     constructor() {
         this.pulse1 = new PulseChannel();
-        this.pulse2 = new PulseChannel();
+        this.pulse2 = new PulseChannel(1);
         this.triangle = new TriangleChannel();
         this.noise = new NoiseChannel();
     }
@@ -140,6 +142,9 @@ class Apu implements Writable {
                 this.noise.lengthHalt = (data & Constants.BIT_6) && 1;
                 this.noise.envelopeDisable = (data & Constants.BIT_5) && 1;
                 this.noise.volume = (data & 0xf);
+                break;
+
+            case ApuConstants.UNUSED:
                 break;
 
             case ApuConstants.NOISE_FREQUENCY_1:

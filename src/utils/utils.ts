@@ -65,10 +65,10 @@ class Logger {
 
     log(args: any[]): void {
         if (this.previousArgs && args.length !== this.previousArgs.length) {
-            throw new Error('args dimensions mismatch');
+            this.previousArgs = null;
         }
 
-        let log = false;
+        let log = Boolean(this.previousArgs);
         if (this.previousArgs) {
             for (const [i, v] of this.previousArgs.entries()) {
                 log = args[i] !== v;

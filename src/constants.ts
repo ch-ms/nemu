@@ -1,5 +1,6 @@
 export const enum Constants {
     KILOBYTE = 1024,
+    SIXTEEN_KILOBYTES = Constants.KILOBYTE * 16,
     BIT_8 = 0b10000000,
     BIT_7 = 0b01000000,
     BIT_6 = 0b00100000,

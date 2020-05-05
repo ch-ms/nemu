@@ -7,10 +7,10 @@ const nestestRom = new Uint8Array(nestestJson).buffer;
 
 describe('Cartridge parser', () => {
     it('parse nestest.nes right', () => {
-        const {header, prgRom, chrRom} = parseCartridge(nestestRom);
+        const {header, prgRom, chrData} = parseCartridge(nestestRom);
         expect(header).toEqual({prgSize16K: 1, chrSize8K: 1, mapper: 0, haveTrainer: false, mirroring: MirroringMode.HORIZONTAL});
         expect(prgRom.length).toEqual(16 * Constants.KILOBYTE);
-        expect(chrRom.length).toEqual(8 * Constants.KILOBYTE);
+        expect(chrData.length).toEqual(8 * Constants.KILOBYTE);
     });
 
     it('throw error if rom is not in iNes format', () => {

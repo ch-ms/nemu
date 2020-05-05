@@ -1,5 +1,5 @@
 import {Constants} from './constants';
-import {Uint8, Bit, Uint16, Numbers} from './numbers';
+import {Uint8, Bit, Uint16} from './numbers';
 
 export type DutyCycleIndex = 0 | 1 | 2 | 3;
 
@@ -136,13 +136,13 @@ export class PulseChannel {
 
     private updateSweepNextPeriodAndMuteFlag(): void {
         const sweepChange = this.period >>> this.sweepShift;
-        // Pulse 1 adds the ones' complement (−c − 1). Making 20 negative produces a change amount of −21.
-        // Pulse 2 adds the two's complement (−c). Making 20 negative produces a change amount of −20.
         this.sweepNextPeriod = (
             this.sweepNegate ?
+                // Pulse 1 adds the ones' complement (−c − 1). Making 20 negative produces a change amount of −21.
+                // Pulse 2 adds the two's complement (−c). Making 20 negative produces a change amount of −20.
                 this.period + ~sweepChange + this.channelNumber :
                 this.period + sweepChange
-        ) & Numbers.UINT16_CAST;
+        );
 
         // When the channel's period is less than 8 or the result of
         // the shifter is greater than $7FF, the channel's DAC receives

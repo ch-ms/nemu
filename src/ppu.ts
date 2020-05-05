@@ -338,7 +338,7 @@ class Ppu implements Device {
         addr %= 0x4000;
 
         if (addr < PpuConstants.NAMETABLE_START_ADDR) {
-            // TODO write to pattern table
+            this.cartridge.write(addr, data);
             return;
         } else if (addr < PpuConstants.PALETTE_START_ADDR) {
             const {nametable, index} = this.mirrorNametable(addr);
@@ -505,7 +505,9 @@ class Ppu implements Device {
                     const addrLo = (
                         patternTableOffset +
                         ((tileOffset + tilePart) * 16) +
-                        (flipY ? 7 - yOffset: yOffset)
+                        // offset into part of sprite can't be more than 7
+                        // so bring it back with & 0x7
+                        (flipY ? 7 - yOffset & 0x7: yOffset & 0x7)
                     ) & Numbers.UINT16_CAST;
 
                     // TODO ppu read is slow, mb need to buffer this data
@@ -652,7 +654,9 @@ class Ppu implements Device {
         this.patternTableOffset8x8 = (this.controlRegister & ControlRegister.PATTERN_SPRITE) << 9;
     }
 
+    // TODO optimize this somehow
     private mirrorNametable(addr: Uint16): {nametable: Uint8Array, index: number} {
+        // TODO we can do it once in a cartridge
         if (
             this.cartridge.mirroringMode !== MirroringMode.HORIZONTAL &&
             this.cartridge.mirroringMode !== MirroringMode.VERTICAL
@@ -661,17 +665,18 @@ class Ppu implements Device {
             throw new Error(msg);
         }
 
-        addr %= 0x3000;
+        // TODO there is no need to expose index, we can compute it in caller
         const index = addr % PpuConstants.NAMETABLE_SIZE;
+        // TODO can precompute
         const isHorizontal = this.cartridge.mirroringMode === MirroringMode.HORIZONTAL;
         if (addr < 0x2400) {
             return {nametable: this.nametable0, index};
-        } else if (addr >= 0x2400 && addr < 0x2800) {
+        } else if (/* addr >= 0x2400 && */ addr < 0x2800) {
             return {nametable: isHorizontal ? this.nametable0 : this.nametable1, index};
-        } else if (addr >= 0x2800 && addr < 0x2c00) {
+        } else if (/* addr >= 0x2800 && */ addr < 0x2c00) {
             return {nametable: isHorizontal ? this.nametable1 : this.nametable0, index};
         } else /* addr >= 0x2c00 && addr < 0x3000 */ {
-            return {nametable: isHorizontal ? this.nametable1 : this.nametable0, index};
+            return {nametable: isHorizontal ? this.nametable0 : this.nametable1, index};
         }
     }
 
