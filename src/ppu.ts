@@ -128,7 +128,8 @@ class Ppu implements Device {
     private statusRegister: Uint8 = 0x0;
 
     private controlRegister: Uint8 = 0x0;
-    private spritesHeight: 8 | 16 = 8;
+    private isSprites8x8 = true;
+    private patternTableOffset8x8 = 0;
 
     private maskRegister: Uint8 = 0x0;
     private isRenderingEnabled = 0;
@@ -438,11 +439,12 @@ class Ppu implements Device {
         // Step: evaluate sprites for next scanline
         if (this.scanline !== -1 && this.cycle === PpuConstants.VISIBLE_SCANLINE_END_CYCLE) {
             this.scanlineSpritesIndexes = [];
+            const spritesHeight = this.isSprites8x8 ? 8 : 16;
             // Eval which sprites are visible on the next scanline
             for (let i = 0; i < PpuConstants.OAM_ENTRIES; i++) {
                 const index = i * PpuConstants.OAM_ENTRY_SIZE;
                 const yOffset = this.scanline - this.oam[index + PpuConstants.OAM_ENTRY_Y];
-                if (yOffset >= 0 && yOffset < this.spritesHeight) {
+                if (yOffset >= 0 && yOffset < spritesHeight) {
                     if (this.scanlineSpritesIndexes.length === PpuConstants.MAX_SPRITES_PER_SCANLINE) {
                         // Sprite overflow flag has different behaviour, we simplify this a litle bit
                         this.statusRegister |= StatusRegister.SPRITE_OVERFLOW;
@@ -489,14 +491,17 @@ class Ppu implements Device {
                     const yOffset = this.scanline - 1 - this.oam[index + PpuConstants.OAM_ENTRY_Y];
                     const tileId = this.oam[index + PpuConstants.OAM_ENTRY_TILE_ID];
 
-                    const patternTableOffset = this.spritesHeight === 8 ?
-                        // TODO PERF Maybe precache?
-                        (this.controlRegister & ControlRegister.PATTERN_SPRITE) << 9 :
-                        (tileId & 0b1);
-                    const tilePart = this.spritesHeight === 8 ? 0 : (
-                        yOffset < 8 ? (flipY ? 1 : 0) : (flipY ? 0 : 1)
-                    );
-                    const tileOffset = this.spritesHeight === 8 ? tileId : tileId & 0b11111110;
+                    let patternTableOffset, tilePart, tileOffset;
+                    if (this.isSprites8x8) {
+                        patternTableOffset = this.patternTableOffset8x8;
+                        tilePart = 0;
+                        tileOffset = tileId;
+                    } else {
+                        patternTableOffset = (tileId & Constants.BIT_1) << 12;
+                        tilePart = yOffset < 8 ? (flipY ? 1 : 0) : (flipY ? 0 : 1);
+                        tileOffset = tileId & 0b11111110;
+                    }
+
                     const addrLo = (
                         patternTableOffset +
                         ((tileOffset + tilePart) * 16) +
@@ -643,7 +648,8 @@ class Ppu implements Device {
     private setControlRegister(value: Uint8): void {
         this.controlRegister = value;
         this.tram.setNametable(value);
-        this.spritesHeight = this.controlRegister & ControlRegister.SPRITE_SIZE ? 16 : 8;
+        this.isSprites8x8 = !(this.controlRegister & ControlRegister.SPRITE_SIZE);
+        this.patternTableOffset8x8 = (this.controlRegister & ControlRegister.PATTERN_SPRITE) << 9;
     }
 
     private mirrorNametable(addr: Uint16): {nametable: Uint8Array, index: number} {
