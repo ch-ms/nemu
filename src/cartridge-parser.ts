@@ -18,7 +18,7 @@ interface BaseCartridgeData<T> {
 type CartridgeData = BaseCartridgeData<Uint8Array>;
 export type SerializedCartridgeData = BaseCartridgeData<number[]>;
 
-const enum CartridgeConstants {
+export const enum CartridgeConstants {
     HEADER_OFFSET = 16,
     TRAINER_OFFSET = 512,
     PRG_BANK_SIZE = 16384,

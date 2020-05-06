@@ -2,6 +2,7 @@ import {Uint8, Uint16} from './numbers';
 import {CartridgeHeader} from './cartridge-parser';
 import {Mapper000} from './mapper-000';
 import {Mapper002} from './mapper-002';
+import {Mapper003} from './mapper-003';
 
 // TODO put more thought into it, refactor!
 /**
@@ -21,6 +22,9 @@ function createMapper(cartridgeHeader: CartridgeHeader): Mapper {
 
         case 2:
             return new Mapper002(cartridgeHeader);
+
+        case 3:
+            return new Mapper003(cartridgeHeader);
 
         default:
             throw new Error(`Unknown mapper "${mapper}"`);
