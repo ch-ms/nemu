@@ -11,3 +11,19 @@
 .nametable-view {
     padding-top: 5px;
 }
+
+.gamepad-settings .gamepad-settings__no-gamepad {
+    display: block;
+}
+
+.gamepad-settings .gamepad-settings__gamepad {
+    display: none;
+}
+
+.gamepad-settings.-gamepad .gamepad-settings__no-gamepad {
+    display: none;
+}
+
+.gamepad-settings.-gamepad .gamepad-settings__gamepad {
+    display: block;
+}

@@ -6,7 +6,7 @@ import {Clock} from './clock';
 import {AudioClock} from './audio-clock';
 import {RafClock} from './raf-clock';
 import {Cartridge, CartridgeState} from './cartridge';
-import {ControllerInterface} from './controller';
+import {GamepadInterface} from './gamepad';
 import {Bit} from './numbers';
 
 /*
@@ -26,8 +26,8 @@ export const enum Timings {
 
 interface Options {
     screenInterface?: ScreenInterface;
-    controller1Interface?: ControllerInterface;
-    controller2Interface?: ControllerInterface;
+    gamepad1Interface?: GamepadInterface;
+    gamepad2Interface?: GamepadInterface;
     state?: NesState;
 }
 
@@ -72,8 +72,8 @@ class Nes {
             this.cartridge,
             this.ppu,
             this.apu,
-            options.controller1Interface,
-            options.controller2Interface,
+            options.gamepad1Interface,
+            options.gamepad2Interface,
             options.state ? options.state.cpuBus : undefined
         );
         this.cpu = new Cpu(this.bus, options.state ? options.state.cpu : undefined);

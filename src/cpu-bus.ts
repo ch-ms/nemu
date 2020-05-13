@@ -4,7 +4,7 @@ import {Ppu} from './ppu';
 import {Apu, ApuConstants} from './apu';
 import {Constants} from './constants';
 import {Cartridge} from './cartridge';
-import {ControllerInterface, defaultControllerInterface} from './controller';
+import {GamepadInterface, defaultGamepadInterface} from './gamepad';
 import {fillUint8Array} from './utils/utils';
 
 const enum CpuBusConstants {
@@ -23,8 +23,8 @@ export interface CpuBusState {
 class CpuBus implements Bus {
     private readonly ram = new Uint8Array(2 * Constants.KILOBYTE);
 
-    private controller1Shifter: Uint8 = 0;
-    private controller2Shifter: Uint8 = 0;
+    private gamepad1Shifter: Uint8 = 0;
+    private gamepad2Shifter: Uint8 = 0;
 
     private oamDmaPage: Uint8 = 0;
     private oamDmaOffset: Uint8 = 0;
@@ -34,8 +34,8 @@ class CpuBus implements Bus {
         private readonly cartridge: Cartridge,
         private readonly ppu: Ppu,
         private readonly apu: Apu,
-        private readonly controller1Interface: ControllerInterface = defaultControllerInterface,
-        private readonly controller2Interface: ControllerInterface = defaultControllerInterface,
+        private readonly gamepad1Interface: GamepadInterface = defaultGamepadInterface,
+        private readonly gamepad2Interface: GamepadInterface = defaultGamepadInterface,
         state?: CpuBusState
     ) {
         if (state) {
@@ -94,13 +94,13 @@ class CpuBus implements Bus {
             return 0;
 
         } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
-            const data = (this.controller1Shifter & Constants.BIT_8) && 1;
-            this.controller1Shifter = (this.controller1Shifter << 1) & Numbers.UINT8_CAST;
+            const data = (this.gamepad1Shifter & Constants.BIT_8) && 1;
+            this.gamepad1Shifter = (this.gamepad1Shifter << 1) & Numbers.UINT8_CAST;
             return data;
 
         } else if (addr === CpuBusConstants.CONTROLLER_2_ADDR) {
-            const data = (this.controller2Shifter & Constants.BIT_8) && 1;
-            this.controller2Shifter = (this.controller2Shifter << 1) & Numbers.UINT8_CAST;
+            const data = (this.gamepad2Shifter & Constants.BIT_8) && 1;
+            this.gamepad2Shifter = (this.gamepad2Shifter << 1) & Numbers.UINT8_CAST;
             return data;
 
         } else if (addr >= 0x4018 && addr < 0x4020) {
@@ -136,8 +136,8 @@ class CpuBus implements Bus {
         } else if (addr === CpuBusConstants.CONTROLLER_1_ADDR) {
             // See https://wiki.nesdev.com/w/index.php/Controller_reading for proper implementation
             // See https://wiki.nesdev.com/w/index.php/2A03
-            this.controller1Shifter = this.controller1Interface();
-            this.controller2Shifter = this.controller2Interface();
+            this.gamepad1Shifter = this.gamepad1Interface();
+            this.gamepad2Shifter = this.gamepad2Interface();
 
         } else if (addr === ApuConstants.FRAME_COUNTER) {
             this.apu.write(addr, data);

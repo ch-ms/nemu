@@ -1,7 +1,7 @@
 import {Nes, NesState} from '../nes';
 import {Cpu} from '../cpu';
 import {ScreenInterface} from '../ppu';
-import {ControllerButtons, ControllerInterface} from '../controller';
+import {GamepadInterface} from '../gamepad';
 import {parseCartridge} from '../cartridge-parser';
 import {Cartridge} from '../cartridge';
 import {cpuStatusToFormattedString} from '../utils/utils';
@@ -10,22 +10,11 @@ import {PaletteView} from './palette-view';
 import {MemoryView} from './memory-view';
 import {PatternView} from './pattern-view';
 import {NametableView} from './nametable-view';
+import {GamepadSettingsView} from './gamepad-settings-view';
 import {OamView} from './oam-view';
-import {Uint8, Numbers} from '../numbers';
 
 import * as nestestJson from '../../data/nestest.nes.json';
 const nestestRom = new Uint8Array(nestestJson).buffer;
-
-const keyCodes = new Map<number, number>([
-    [65, ControllerButtons.A],
-    [83, ControllerButtons.B],
-    [90, ControllerButtons.SELECT],
-    [88, ControllerButtons.START],
-    [38, ControllerButtons.UP],
-    [40, ControllerButtons.DOWN],
-    [37, ControllerButtons.LEFT],
-    [39, ControllerButtons.RIGHT]
-]);
 
 const NES_SAVE_STATE_STORAGE_KEY = 'nesSaveState';
 
@@ -46,19 +35,19 @@ class GameSession {
     static fromSerializedState(
         state: NesState,
         screenInterface: ScreenInterface,
-        controllerInterface: ControllerInterface
+        gamepadInterface: GamepadInterface
     ): GameSession {
         return new GameSession(
-            Nes.fromSerializedState(state, {screenInterface, controller1Interface: controllerInterface})
+            Nes.fromSerializedState(state, {screenInterface, gamepad1Interface: gamepadInterface})
         );
     }
 
     static fromCartridge(
         cartridge: Cartridge,
         screenInterface: ScreenInterface,
-        controllerInterface: ControllerInterface
+        gamepadInterface: GamepadInterface
     ): GameSession {
-        return new GameSession(new Nes(cartridge, {screenInterface, controller1Interface: controllerInterface}));
+        return new GameSession(new Nes(cartridge, {screenInterface, gamepad1Interface: gamepadInterface}));
     }
 }
 
@@ -80,6 +69,7 @@ class EmulatorDebuggerUI {
     private readonly paletteView: PaletteView;
     private readonly patternView: PatternView;
     private readonly nametableView: NametableView;
+    private readonly gamepadSettingsView: GamepadSettingsView;
     private readonly oamView: OamView;
     private gameSession?: GameSession;
 
@@ -97,6 +87,7 @@ class EmulatorDebuggerUI {
         this.patternView = new PatternView(this.container.querySelector('[data-view=pattern]') as HTMLElement);
         this.nametableView = new NametableView(this.container.querySelector('[data-view=nametable]') as HTMLElement);
         this.oamView = new OamView(this.container.querySelector('[data-view=oam]') as HTMLElement);
+        this.gamepadSettingsView = new GamepadSettingsView(this.container.querySelector('[data-view=gamepad-settings]') as HTMLElement);
 
         this.container.querySelector('button[name=step-instruction]')!.addEventListener('click', this.onStepInstructionClick);
         this.container.querySelector('button[name=reset]')!.addEventListener('click', this.onResetClick);
@@ -122,35 +113,6 @@ class EmulatorDebuggerUI {
                 this.render();
             }
         };
-    }
-
-    private createControllerInterface = (): ControllerInterface => {
-        let buttons = 0;
-        const prevent = (e: Event): void => {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        document.addEventListener('keydown', (e) => {
-            const button = keyCodes.get(e.which);
-            if (button === undefined) {
-                return;
-            }
-
-            prevent(e);
-            buttons |= button;
-        });
-        document.addEventListener('keyup', (e) => {
-            const button = keyCodes.get(e.which);
-            if (button === undefined) {
-                return;
-            }
-
-            prevent(e);
-            buttons = (buttons & ~button) & Numbers.UINT8_CAST;
-        });
-
-        return (): Uint8 => buttons;
     }
 
     private onStepInstructionClick = (): void => {
@@ -226,14 +188,14 @@ class EmulatorDebuggerUI {
         }
 
         console.log('load', state);
-        this.gameSession = GameSession.fromSerializedState(state, this.createScreenInterface(), this.createControllerInterface());
+        this.gameSession = GameSession.fromSerializedState(state, this.createScreenInterface(), this.gamepadSettingsView.getGamepadInterface());
         this.gameSession.nes.run();
         this.render();
     }
 
     private createGameSession(buffer: ArrayBuffer): void {
         const cartridge = new Cartridge(parseCartridge(buffer));
-        this.gameSession = GameSession.fromCartridge(cartridge, this.createScreenInterface(), this.createControllerInterface());
+        this.gameSession = GameSession.fromCartridge(cartridge, this.createScreenInterface(), this.gamepadSettingsView.getGamepadInterface());
         this.render();
     }
 

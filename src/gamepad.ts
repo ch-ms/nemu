@@ -1,6 +1,6 @@
 import {Uint8} from './numbers';
 
-export const enum ControllerButtons {
+export const enum GamepadButtons {
     A = 1 << 7,
     B = 1 << 6,
     SELECT = 1 << 5,
@@ -11,13 +11,13 @@ export const enum ControllerButtons {
     RIGHT = 1
 }
 
-type ControllerInterface = () => Uint8;
+type GamepadInterface = () => Uint8;
 
-function defaultControllerInterface(): Uint8 {
+function defaultGamepadInterface(): Uint8 {
     return 0;
 }
 
 export {
-    ControllerInterface,
-    defaultControllerInterface
+    GamepadInterface,
+    defaultGamepadInterface
 };
