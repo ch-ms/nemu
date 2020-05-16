@@ -123,40 +123,42 @@ class Nes {
         };
     }
 
-    private tick = (): void => {
-        // TODO why we clock ppu first? Cpu can change ppu state at clock. So it is kinda unstable?
-        this.ppu.clock();
+    private tick = (times = 1): void => {
+        while (times--) {
+            // TODO why we clock ppu first? Cpu can change ppu state at clock. So it is kinda unstable?
+            this.ppu.clock();
 
-        if (this.cycle % Timings.APU_CLOCK_PER_PPU_CLOCK === 0) {
-            this.apu.clock();
-        }
-
-        if (this.cpuWillBeClocked) {
-            // TODO Cpu & Ppu sync state here mb we can incapsulate it better
-            if (this.bus.isOamDmaTransfer) {
-                const isOdd = (this.cycle & 1) as Bit;
-                if (!this.oamDmaInitialized) {
-                    // We need to wait odd cycle to start oam dma
-                    this.oamDmaInitialized = isOdd;
-                } else if (isOdd) {
-                    // On odd clock we write
-                    this.ppu.oam[this.bus.getOamDmaOffset()] = this.bus.getOamDmaByte();
-                    if (!this.bus.progressOamDmaTransfer()) {
-                        this.oamDmaInitialized = 0;
-                    }
-                }
-            } else {
-                this.cpu.clock();
+            if (this.cycle % Timings.APU_CLOCK_PER_PPU_CLOCK === 0) {
+                this.apu.clock();
             }
-        }
 
-        if (this.ppu.nmiRequestFlag) {
-            this.cpu.nmi();
-            this.ppu.nmiRequestFlag = false;
-        }
+            if (this.cpuWillBeClocked) {
+                // TODO Cpu & Ppu sync state here mb we can incapsulate it better
+                if (this.bus.isOamDmaTransfer) {
+                    const isOdd = (this.cycle & 1) as Bit;
+                    if (!this.oamDmaInitialized) {
+                        // We need to wait odd cycle to start oam dma
+                        this.oamDmaInitialized = isOdd;
+                    } else if (isOdd) {
+                        // On odd clock we write
+                        this.ppu.oam[this.bus.getOamDmaOffset()] = this.bus.getOamDmaByte();
+                        if (!this.bus.progressOamDmaTransfer()) {
+                            this.oamDmaInitialized = 0;
+                        }
+                    }
+                } else {
+                    this.cpu.clock();
+                }
+            }
 
-        this.cycle++;
-        this.cpuWillBeClocked = this.cycle % Timings.CPU_CLOCK_PER_PPU_CLOCK === 0;
+            if (this.ppu.nmiRequestFlag) {
+                this.cpu.nmi();
+                this.ppu.nmiRequestFlag = false;
+            }
+
+            this.cycle++;
+            this.cpuWillBeClocked = this.cycle % Timings.CPU_CLOCK_PER_PPU_CLOCK === 0;
+        }
     }
 
     static fromSerializedState(state: NesState, options: Options = {}): Nes {

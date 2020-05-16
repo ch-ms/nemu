@@ -31,12 +31,12 @@ export class AudioClock implements Clock {
 
     constructor(
         private readonly apu: Apu,
-        private readonly tick: () => void
+        private readonly tick: (times: number) => void
     ) {
         this.context = new (window as any).AudioContext();
 
         this.processor = this.context.createScriptProcessor(AudioClockConstants.BUFFER_SIZE, 1, 9);
-        this.ticksPerSample = Timings.PPU_CLOCK_HZ / this.context.sampleRate;
+        this.ticksPerSample = (Timings.PPU_CLOCK_HZ / this.context.sampleRate) | 0;
 
         this.context.audioWorklet.addModule('../build/src/audio-processor.js')
             .then(() => {
@@ -72,15 +72,14 @@ export class AudioClock implements Clock {
         const pulse2Volume = e.outputBuffer.getChannelData(ChannelParams.PULSE_2_VOLUME);
         const pulse2Duty = e.outputBuffer.getChannelData(ChannelParams.PULSE_2_DUTY);
 
+        const trianglePeriod = e.outputBuffer.getChannelData(ChannelParams.TRIANGLE_PERIOD);
+
         const noiseValue = e.outputBuffer.getChannelData(ChannelParams.NOISE_VALUE);
         const noiseVolume = e.outputBuffer.getChannelData(ChannelParams.NOISE_VOLUME);
 
-        const trianglePeriod = e.outputBuffer.getChannelData(ChannelParams.TRIANGLE_PERIOD);
         for (let i = 0; i < AudioClockConstants.BUFFER_SIZE; i++) {
             // TODO mb we can just compute mean of all sample values and sample once?
-            for (let j = 0; j < this.ticksPerSample; j++) {
-                this.tick();
-            }
+            this.tick(this.ticksPerSample);
 
             if (this.apu.pulse1.length && !this.apu.pulse1.sweepMute && this.apu.pulse1.outputVolume) {
                 pulse1Period[i] = this.apu.pulse1.period;
@@ -98,6 +97,7 @@ export class AudioClock implements Clock {
                 pulse2Period[i] = 0;
             }
 
+            // period > 2 halts channel at ultrasonic values
             if (this.apu.triangle.lengthCounter && this.apu.triangle.linearCounter && this.apu.triangle.period > 2) {
                 trianglePeriod[i] = this.apu.triangle.period;
             } else {
