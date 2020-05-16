@@ -7,7 +7,8 @@ const srcConfig = {
     name: 'src',
     entry: {
         'cpu-debugger-ui': './src/cpu-debugger-ui.ts',
-        'emulator-debugger': './src/emulator-debugger/emulator-debugger.ts'
+        'emulator-debugger': './src/emulator-debugger/emulator-debugger.ts',
+        'audio-processor': './src/audio-processor.ts'
     },
     resolve: {
         extensions: ['.ts']
