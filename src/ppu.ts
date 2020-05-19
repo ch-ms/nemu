@@ -681,7 +681,9 @@ class Ppu implements Device {
     }
 
     private incrementVram(): void {
+        // TODO PERF precompute
         const increment = (this.controlRegister & ControlRegister.INCREMENT_MODE) ? 32 : 1;
+        // TODO PERF move to loopy or inline
         this.vram.value = (this.vram.value + increment) & Numbers.UINT16_CAST;
     }
 
