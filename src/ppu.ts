@@ -213,9 +213,11 @@ class Ppu implements Device {
     read(addr: Uint16): Uint8 {
         switch (addr) {
             case PpuConstants.CONTROL_REGISTER:
+                // Non readable
                 return 0;
 
             case PpuConstants.MASK_REGISTER:
+                // Non readable
                 return 0;
 
             case PpuConstants.STATUS_REGISTER: {
@@ -226,17 +228,18 @@ class Ppu implements Device {
             }
 
             case PpuConstants.OAM_ADDR_REGISTER:
-                // Not readable
+                // Non readable
                 return 0;
 
             case PpuConstants.OAM_DATA_REGISTER:
                 return this.oam[this.oamAddr];
 
             case PpuConstants.SCROLL_REGISTER:
+                // Non readable
                 return 0;
 
             case PpuConstants.PPU_ADDR_REGISTER:
-                // Can't read from PPU_ADDR_REGISTER
+                // Non readable
                 return 0;
 
             case PpuConstants.PPU_DATA_REGISTER: {
@@ -262,6 +265,7 @@ class Ppu implements Device {
      * Write from cpu
      */
     write(addr: Uint16, data: Uint8): void {
+        // TODO mb return, not break?
         switch (addr) {
             case PpuConstants.CONTROL_REGISTER:
                 this.setControlRegister(data);
@@ -272,7 +276,7 @@ class Ppu implements Device {
                 break;
 
             case PpuConstants.STATUS_REGISTER:
-                // Can't write to status register
+                // Non writeable
                 break;
 
             case PpuConstants.OAM_ADDR_REGISTER:
