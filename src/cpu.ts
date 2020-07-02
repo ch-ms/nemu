@@ -396,7 +396,7 @@ class Cpu {
             addrRelative = -256 + addrRelative;
         }
 
-        // TODO: addrRelative is not the same shit as addrAbs, need to account that
+        // TODO: addrRelative is not the same as addrAbs, need to account that
         return [addrRelative, 0];
     }
 

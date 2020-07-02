@@ -45,7 +45,7 @@ const enum ControlRegister {
     PATTERN_SPRITE = 1 << 3,
     PATTERN_BACKGROUND = 1 << 4,
     SPRITE_SIZE = 1 << 5,
-    PPU_SLAVE_MODE = 1 << 6,
+    PPU_SECONDARY_MODE = 1 << 6,
     ENABLE_NMI = 1 << 7
 }
 
