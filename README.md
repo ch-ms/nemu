@@ -1,4 +1,4 @@
-# NEMU - NES emulation over web technologies
+# NEMU - NES emulation via web technologies
 
 ## Getting started
 
