@@ -2,7 +2,7 @@ import {parseCartridge} from '../src/cartridge-parser';
 import {Constants} from '../src/constants';
 import {MirroringMode} from '../src/mirroring-mode';
 
-import * as nestestJson from '../data/nestest.nes.json';
+import {nestestJson} from '../data/nestest.nes';
 const nestestRom = new Uint8Array(nestestJson).buffer;
 
 describe('Cartridge parser', () => {

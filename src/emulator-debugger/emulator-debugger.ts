@@ -13,7 +13,7 @@ import {NametableView} from './nametable-view';
 import {GamepadSettingsView} from './gamepad-settings-view';
 import {OamView} from './oam-view';
 
-import * as nestestJson from '../../data/nestest.nes.json';
+import {nestestJson} from '../../data/nestest.nes';
 const nestestRom = new Uint8Array(nestestJson).buffer;
 
 const NES_SAVE_STATE_STORAGE_KEY = 'nesSaveState';

@@ -52,3 +52,7 @@ test-debug:
 
 tests/nestest.log.json:
 	@node ./tools/parse-nestest-log/parse-nestest-log.js > ./tests/nestest.log.json
+
+.PHONY: dev-server
+dev-server:
+	@node dev-server.js

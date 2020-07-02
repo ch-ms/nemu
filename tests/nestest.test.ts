@@ -5,6 +5,7 @@ import {Cartridge} from '../src/cartridge';
 import {Nes} from '../src/nes';
 import {StatusFlags} from '../src/cpu';
 import {uint16ToHex, uint8ToHex} from '../src/utils/utils';
+import {nestestJson} from '../data/nestest.nes';
 
 interface LogEntry {
     programCounter: number,
@@ -19,7 +20,6 @@ interface LogEntry {
 
 describe('Compare cpu behavior with nestest.log.txt', () => {
     const nestestLog: LogEntry[] = JSON.parse(fs.readFileSync('./tests/nestest.log.json'));
-    const nestestJson = JSON.parse(fs.readFileSync('./data/nestest.nes.json'));
     const nestestRom = new Uint8Array(nestestJson).buffer;
     const cartridgeData = parseCartridge(nestestRom);
     // Jump to 0xc000 to start test
